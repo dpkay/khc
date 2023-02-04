@@ -1,0 +1,85 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+pyscript:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+# Text to speech
+tts:
+  - platform: google_translate
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+logger:
+  default: info
+  logs:
+    custom_components.pyscript: info
+
+# ----------------------------------------------------------------------------
+# Booleans.
+# ----------------------------------------------------------------------------
+input_boolean:
+  bedroom_sound_mix_none_active:
+  bedroom_sound_mix_piano_seat_with_speakers_active:
+  bedroom_sound_mix_desk_seat_with_speakers_active:
+  bedroom_sound_mix_piano_seat_with_headphones_active:
+  bedroom_sound_mix_desk_seat_with_headphones_active:
+  livingroom_qn90a_ambient_mode:
+
+# ----------------------------------------------------------------------------
+# Floats.
+# ----------------------------------------------------------------------------
+input_number:
+  bedroom_windows_pc_fader_1:
+    min: 0
+    max: 1
+    step: 0.01
+  bedroom_windows_pc_fader_2:
+    min: 0
+    max: 1
+    step: 0.01
+  bedroom_windows_pc_fader_3:
+    min: 0
+    max: 1
+    step: 0.01
+  bedroom_windows_pc_fader_4:
+    min: 0
+    max: 1
+    step: 0.01
+  bedroom_windows_pc_fader_5:
+    min: 0
+    max: 1
+    step: 0.01
+  
+# ----------------------------------------------------------------------------
+# Scripts.
+# ----------------------------------------------------------------------------
+script:
+  # Dummy node. Required because Stream Deck needs to point at something.
+  dummy_script:
+    mode: single
+    sequence:
+
+  # Turns off every device in the bedroom. Useful to go to sleep.
+  # TODO: Migrate to pyscript.
+  bedroom_turn_off_everything:
+    mode: single
+    sequence:
+    - service: input_text.set_value
+      data_template:
+        entity_id: input_text.bedroom_sound_mix_name
+        value: silence
+    - service: light.turn_off
+      data:
+        entity_id:
+        - light.bedroom_ceiling_light
+        - light.bedroom_closet_light
+        - light.bedroom_studio_light
+        - light.bedroom_plug_desk_light
+        - light.bedroom_plug_computer_screen
