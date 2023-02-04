@@ -74,15 +74,15 @@ if __name__ == "__main__":
   # Set up MQTT.
   while True:
     try:
+      print("Attempting to connect to MQTT server...")
       mqtt_client = paho.mqtt.client.Client(MQTT_CLIENT_NAME)
       mqtt_client.on_connect = on_connect  # Define callback function for successful connection
       mqtt_client.on_message = on_message  # Define callback function for receipt of a message
-
-      print("Attempting to connect...")
       mqtt_client.connect('127.0.0.1', 1883)
+      print("Connected.")
 
       sending_key_socket = SendingKeySocket(SERVER_NAME, SERVER_IP)
-      sending_key_socket.connect()
+      sending_key_socket.connect(keyfile_path="/home/dpkay/key.pem", certfile_path="/home/dpkay/cert.pem")
       mqtt_client.loop_forever()  # Start networking daemon
 
     except Exception as e:

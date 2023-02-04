@@ -1,8 +1,9 @@
-import socket, ssl
-import OpenSSL
-from OpenSSL.crypto import load_certificate
-from OpenSSL.crypto import FILETYPE_PEM
-from asn1crypto.x509 import Certificate
+import socket
+import ssl
+#import OpenSSL
+#from OpenSSL.crypto import load_certificate
+#from OpenSSL.crypto import FILETYPE_PEM
+#from asn1crypto.x509 import Certificate
 
 
 class SendingKeySocket:
@@ -22,16 +23,15 @@ class SendingKeySocket:
         self.connected = False
         self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
-
-    def connect(self):
+    def connect(self, keyfile_path, certfile_path):
         """
         This function will create a socket to given ip and port,
         with generated certificate and public key
         """
         self.ssl_sock = ssl.wrap_socket(self.sock,
-                            keyfile="key.pem",
-                            certfile="cert.pem",
-                            do_handshake_on_connect=True)
+                                        keyfile_path,
+                                        certfile_path,
+                                        do_handshake_on_connect=True)
         self.ssl_sock.connect((self.host, self.port))
 
     def disconnect(self):
@@ -72,11 +72,11 @@ class SendingKeySocket:
         :return: string of the created configuration message
         """
         # adding the size, 1, message type 0 and seperaor 0
-        message = [1,0,0]
+        message = [1, 0, 0]
         # adding payload size
         message.append(17+len(server_name))
         # adding two 1 as a 4 byte, one 32, one 3 and six 0
-        message += [0,0,0,1,0,0,0,1,32,3,0,0,0,0,0,0]
+        message += [0, 0, 0, 1, 0, 0, 0, 1, 32, 3, 0, 0, 0, 0, 0, 0]
         # adding size of the server name
         message.append(len(server_name))
         # adding server name characters as asci
@@ -89,9 +89,10 @@ class SendingKeySocket:
         This function will receive command code, create and send command message to server.
         :param server_name: integer of command code
         """
-        self.send_message(bytes(self.create_configuration_mesaage(self.server_name)))
+        self.send_message(
+            bytes(self.create_configuration_mesaage(self.server_name)))
         # creating message
-        message = [1,2,0,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        message = [1, 2, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         # adding key code to the mesage
         message.append(command_code)
         # sending key command with press flag
@@ -110,9 +111,10 @@ class SendingKeySocket:
         :param app_name: string of the application package name
         """
         # currently just launch netflix
-        self.send_message(bytes(self.create_configuration_mesaage(self.server_name)))
+        self.send_message(
+            bytes(self.create_configuration_mesaage(self.server_name)))
         # creating message
-        message = [1,16,0]
+        message = [1, 16, 0]
         # adding key code to the mesage
         name = "intent:#Intent;component=com.netflix.ninja/.MainActivity;end"
         message.append(len(name))
@@ -120,4 +122,3 @@ class SendingKeySocket:
             message.append(ord(item))
         # sending key command with release flag
         self.send_message(bytes(message))
-
