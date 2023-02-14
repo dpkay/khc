@@ -21,6 +21,13 @@ logger:
   logs:
     custom_components.pyscript: info
 
+binary_sensor:
+  - platform: flic
+
+spotcast:
+  sp_dc: AQCe3ZribH_raek1YQMhTFm6_aS9j_fBQ__XmV-aBMxnPIknuQRA0lgFoG-zRyMhFR7K_ZzZUv33EAAEHUFAGpRk8pFXLRV9evMGBHpxxp55qgKrw949c7FwkOlSlJE3Yc1dCsTbrlFHJ5RyPMKJcCDfB97gNyk6UVUuK4MXynvWGzAsoxVzY1OMWJF0tMKYKRvim9i6ebE9y48yEHGuOO5ooibT
+  sp_key: 987e9007-6e74-4705-a3af-fc3d9e5dfd58
+
 # ----------------------------------------------------------------------------
 # Booleans.
 # ----------------------------------------------------------------------------
@@ -56,7 +63,7 @@ input_number:
     min: 0
     max: 1
     step: 0.01
-  
+
 # ----------------------------------------------------------------------------
 # Scripts.
 # ----------------------------------------------------------------------------

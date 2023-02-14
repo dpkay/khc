@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 
-from pairing import PairingSocket
-import json
-import paho.mqtt.client
-from sending_keys import SendingKeySocket
 from key_codes import *
+from pairing import PairingSocket
+from sending_keys import SendingKeySocket
+import json
+import os
+import paho.mqtt.client
 import sys
 import time
 
@@ -79,7 +80,8 @@ if __name__ == "__main__":
       mqtt_client.on_connect = on_connect  # Define callback function for successful connection
       mqtt_client.on_message = on_message  # Define callback function for receipt of a message
       mqtt_client.connect('127.0.0.1', 1883)
-      print("Connected.")
+      mqtt_client.username_pw_set(os.environ["MQTT_USER"],
+                                  os.environ["MQTT_PASSWORD"])
 
       sending_key_socket = SendingKeySocket(SERVER_NAME, SERVER_IP)
       sending_key_socket.connect(keyfile_path="/home/dpkay/key.pem", certfile_path="/home/dpkay/cert.pem")
