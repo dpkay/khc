@@ -1,34 +1,36 @@
 #!/usr/bin/python3
 
-import pygame
+import json
 import numpy
+import os
+import paho.mqtt.client
+import pygame
 import sys
 import time
-import json
-import paho.mqtt.client
 
 MQTT_CLIENT_NAME = "numpad_to_mqtt"
 MQTT_TOPIC = "khc/livingroom/numpad"
 MACALLY_RFNUMKEY_KEY_LIST = [
     # [name, event.key, event.scancode]
-    ['backspace', 8, 22],
-    ['equals', 61, 21],
-    ['slash', 267, 106],
-    ['asterisk', 268, 63],
-    ['seven', 263, 79],
-    ['eight', 264, 80],
-    ['nine', 265, 81],
-    ['minus', 269, 82],
-    ['four', 260, 83],
-    ['five', 261, 84],
-    ['six', 262, 85],
-    ['plus', 270, 86],
-    ['one', 257, 87],
-    ['two', 258, 88],
-    ['three', 259, 89],
-    ['enter', 271, 104],
-    ['zero', 256, 90],
-    ['dot', 266, 91]]
+    # name is of the form <row>_<column>
+    ['1_1', 8, 22],  # backspace
+    ['1_2', 61, 21],  # equals
+    ['1_3', 267, 106],  # slash
+    ['1_4', 268, 63],  # asterisk
+    ['2_1', 263, 79],  # seven
+    ['2_2', 264, 80],  # eight
+    ['2_3', 265, 81],  # nine
+    ['2_4', 269, 82],  # minus
+    ['3_1', 260, 83],  # four
+    ['3_2', 261, 84],  # five
+    ['3_3', 262, 85],  # six
+    ['3_4', 270, 86],  # plus
+    ['4_1', 257, 87],  # one
+    ['4_2', 258, 88],  # two
+    ['4_3', 259, 89],  # three
+    ['mod_left', 256, 90],  # zero
+    ['mod_center', 266, 91],  # dot
+    ['mod_right', 271, 104]]  # enter
 
 # Generate lookup table for later.
 KEYS_BY_ID = {x[1]: x for x in MACALLY_RFNUMKEY_KEY_LIST}
@@ -74,6 +76,9 @@ if __name__ == "__main__":
             mqtt_client.on_connect = on_connect
             mqtt_client.on_message = on_message
             mqtt_client.connect('127.0.0.1', 1883)
+            print(os.environ, file=sys.stderr)
+            mqtt_client.username_pw_set(os.environ["MQTT_USER"],
+                                        os.environ["MQTT_PASSWORD"])
             mqtt_client.loop_start()
             print("Connected.", file=sys.stderr)
 
@@ -82,7 +87,6 @@ if __name__ == "__main__":
 
             # Main event loop.
             while True:
-                #mqtt_client.loop(0.01)  # delay in seconds
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN and event.key == 113:  # 'q'
                         sys.exit(1)

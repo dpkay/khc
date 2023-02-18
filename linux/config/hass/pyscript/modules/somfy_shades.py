@@ -22,7 +22,7 @@ def zwave_write_value(value_id, value, options):
   payload = {"args": [value_id, value, options]}
   mqtt.publish(topic=ZWAVE_WRITE_VALUE_MQTT_TOPIC, payload=json.dumps(payload))
 
-def call_command(node_id, command):
+def call_command_for_node(command, node_id):
   if command == "up":
     zwave_property = "Down"  # 'Up' and 'Down' are inverted here for whatever reason.
     zwave_value = True
@@ -45,3 +45,14 @@ def call_command(node_id, command):
     value=zwave_value,
     options={}
   )
+
+@service("script.send_somfy_shade_command")
+def send_somfy_shade_command(shade_names=None, command=None, entity_id=None):
+  try:
+    node_ids = [ZWAVE_NODE_ID_BY_SHADE_NAME[name] for name in shade_names]
+  except KeyError as e:
+    raise ValueError(f"Unknown shade name: ", e)
+
+  for node_id in node_ids:
+    call_command_for_node(command, node_id)
+

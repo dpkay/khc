@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+# Load secret environment variables.
+source ~/khc-private/bashrc
+
 # Set up environment.
 export KHC_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )
 

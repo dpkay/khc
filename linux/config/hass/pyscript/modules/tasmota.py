@@ -1,0 +1,2 @@
+SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID = "switch.khc_tasmota_001_sonoff_s31lite"
+SWITCH_DININGROOM_XMAS_LIGHTS_ENTITY_ID = "switch.khc_tasmota_002_sonoff_s31lite"

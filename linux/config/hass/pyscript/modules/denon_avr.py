@@ -6,7 +6,8 @@ volume_last_changed_datetime = None
 
 MEDIA_PLAYER_ENTITY_PATH = "media_player.denon_avr_x4700h"
 MEDIA_PLAYER_MAX_VOLUME = 0.91  # given by denon AVR
-RESET_VOLUME = 0.3
+RESET_VOLUME_HIGH = 0.55
+RESET_VOLUME_LOW = 0.4
 VOLUME_INCREMENT = 0.03
 
 def set_volume(volume):
@@ -66,5 +67,8 @@ def increase_volume():
 def decrease_volume():
   change_volume(-VOLUME_INCREMENT)
 
-def reset_volume():
-  set_volume(RESET_VOLUME)
+def reset_volume_high():
+  set_volume(RESET_VOLUME_HIGH)
+
+def reset_volume_low():
+  set_volume(RESET_VOLUME_LOW)
