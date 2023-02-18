@@ -8,25 +8,30 @@
 # 2. Install LoopMIDI and make sure it is always running.
 #
 # 3. Install the Studio One DAW, and make sure it is loaded with our song.
+#
+# 4. Set environment variables MQTT_HOST, MQTT_USER and MQTT_PASSWORD.
 
 import json
+import os
+import paho.mqtt.client
 import pygame.midi
 import time
-import paho.mqtt.client
 
 MQTT_CLIENT_NAME = "mqtt_from_and_to_windows"
 MQTT_TOPIC_PREFIX = "kha/bedroom/windows_pc"
 NUM_UPDATES_PER_SECOND = 50.0
 
 EXAMPLE_MQTT_PARAMS = {
-    "input__piano": 0.5,
-    "input__windows_desktop": 0.5,
-    "input__windows_laptop": 0.5,
-    "input__external_laptop": 0.5,
-    "output__piano_speakers": 0.5,
-    "output__desk_speakers": 0.5,
-    "output__regular_headphones": 0.5,
-    "output__inverted_headphones": 0.5,
+    "input_volume__piano": 0.5,
+    "input_volume__windows_desktop": 0.5,
+    "input_volume__windows_laptop": 0.5,
+    "input_volume__external_laptop": 0.5,
+    "output_volume__piano_speakers": 0.5,
+    "output_volume__desk_speakers": 0.5,
+    "output_volume__regular_headphones": 0.5,
+    "output_volume__inverted_headphones": 0.5,
+    "input_reverb__piano": 0.5,
+    "input_oneminusreverb__piano": 0.5,
 }
 
 
@@ -39,23 +44,36 @@ def create_midi_devices(buffer_size):
         name = dev[1].decode("ascii")
         num_inputs = dev[2]
         num_outputs = dev[3]
-        if name == "Sparrow 5x100" and num_inputs == 1 and num_outputs == 0:
+
+        # Sparrow 5x100: Faders only
+        # Sparrow 5x5: Faders and dials
+        if (
+            name in ["Sparrow 5x100", "Sparrow 5x5"]
+            and num_inputs == 1
+            and num_outputs == 0
+        ):
             sparrow_device_ids.append(i)
         elif name == "LoopMIDI" and num_inputs == 0 and num_outputs == 1:
             loopmidi_device_ids.append(i)
 
-    if len(sparrow_device_ids) != 1:
-        raise Exception(
-            "Unable to find exactly one Sparrow fader device. "
+    if len(sparrow_device_ids) == 1:
+        sparrow_input_device = pygame.midi.Input(sparrow_device_ids[0], buffer_size)
+    else:
+        print(
+            "Warning: unable to find exactly one Sparrow device. "
             f"Number found: {len(sparrow_device_ids)}"
         )
-    if len(loopmidi_device_ids) != 1:
-        raise Exception(
-            "Unable to find exactly one LoopMIDI fader device. "
+        sparrow_input_device = None
+
+    if len(loopmidi_device_ids) == 1:
+        loopmidi_output_device = pygame.midi.Output(loopmidi_device_ids[0])
+    else:
+        print(
+            "Warning: unable to find exactly one LoopMIDI device. "
             f"Number found: {len(loopmidi_device_ids)}"
         )
-    sparrow_input_device = pygame.midi.Input(sparrow_device_ids[0], buffer_size)
-    loopmidi_output_device = pygame.midi.Output(loopmidi_device_ids[0])
+        loopmidi_output_device = None
+
     return (sparrow_input_device, loopmidi_output_device)
 
 
@@ -66,7 +84,7 @@ def midi_params_from_mqtt_params(mqtt_params):
     This function converts MQTT params to MIDI params. Those look as follows:
         [
             [15,  # channel
-             0,   # control ID
+             0,   # controller ID
              0.3  # normalized value
             ], ...
         ]
@@ -79,15 +97,18 @@ def midi_params_from_mqtt_params(mqtt_params):
         except KeyError:
             pass
 
-    maybe_assign(channel=0, controller=0, key="input__piano")
-    maybe_assign(channel=0, controller=1, key="input__windows_desktop")
-    maybe_assign(channel=0, controller=2, key="input__windows_laptop")
-    maybe_assign(channel=0, controller=3, key="input__external_laptop")
+    maybe_assign(channel=0, controller=0, key="input_volume__piano")
+    maybe_assign(channel=0, controller=1, key="input_volume__windows_desktop")
+    maybe_assign(channel=0, controller=2, key="input_volume__windows_laptop")
+    maybe_assign(channel=0, controller=3, key="input_volume__external_laptop")
 
-    maybe_assign(channel=0, controller=16, key="output__piano_speakers")
-    maybe_assign(channel=0, controller=17, key="output__desk_speakers")
-    maybe_assign(channel=0, controller=18, key="output__regular_headphones")
-    maybe_assign(channel=0, controller=19, key="output__inverted_headphones")
+    maybe_assign(channel=0, controller=16, key="output_volume__piano_speakers")
+    maybe_assign(channel=0, controller=17, key="output_volume__desk_speakers")
+    maybe_assign(channel=0, controller=18, key="output_volume__regular_headphones")
+    maybe_assign(channel=0, controller=19, key="output_volume__inverted_headphones")
+
+    maybe_assign(channel=0, controller=32, key="input_reverb__piano")
+    maybe_assign(channel=0, controller=33, key="input_oneminusreverb__piano")
 
     return midi_params
 
@@ -114,7 +135,7 @@ def on_mqtt_message_received(client, userdata_loopmidi_output_device, msg):
         return
 
     # Uncomment the following for debugging the received payload.
-    # print(json.dumps(payload_json, indent=2))
+    print(json.dumps(payload_json, indent=2))
 
     # Now act based on the topic name.
     if msg.topic == f"{MQTT_TOPIC_PREFIX}/daw/set_params":
@@ -122,9 +143,9 @@ def on_mqtt_message_received(client, userdata_loopmidi_output_device, msg):
         send_midi_params_to_loopmidi(midi_params, userdata_loopmidi_output_device)
 
 
-def mqtt_publish_fader_values(client, fader_value_by_id):
-    values_json = json.dumps(fader_value_by_id)
-    client.publish(f"{MQTT_TOPIC_PREFIX}/faders", values_json)
+def mqtt_publish_control_values(client, control_value_by_id):
+    values_json = json.dumps(control_value_by_id)
+    client.publish(f"{MQTT_TOPIC_PREFIX}/controls", values_json)
 
 
 def send_example_midi_params_to_loopmidi(loopmidi_output_device):
@@ -149,26 +170,40 @@ if __name__ == "__main__":
             mqtt_client.on_connect = on_mqtt_connected
             mqtt_client.on_message = on_mqtt_message_received
             mqtt_client.user_data_set(loopmidi_output)
-            mqtt_client.connect("192.168.1.11", 1883)
+            mqtt_client.username_pw_set(
+                os.environ["MQTT_USER"], os.environ["MQTT_PASSWORD"]
+            )
+            mqtt_client.connect(os.environ["MQTT_HOST"], 1883)
 
             # Main event loop.
             while True:
-                events = sparrow_input.read(num_events=1000)
-                fader_value_by_id = {}
+                events = sparrow_input.read(num_events=1000) if sparrow_input else []
+                control_value_by_id = {}
                 for event in events:
                     status = event[0][0]
                     if status == 0xBF:  # Channel 16 control signal.
-                        fader_id_raw = event[0][1]
+                        control_id_raw = event[0][1]
                         value = event[0][2]
 
-                        # Sparrow sends the fader id as zero-based, but for downstream consumption one-based makes more sense.
-                        fader_id = fader_id_raw + 1
+                        # Sparrow 5x5 sends the control id as 5-based.
+                        # Sparrow 5x100 sends the control id as 0-based.
+                        # For downstream consumption one-based makes more sense.
+                        print(control_id_raw)
+                        if control_id_raw > 4:
+                            # Sparrow 5x5.
+                            # TODO: Fix after testing.
+                            control_id_number = control_id_raw - 4
+                            control_id = f"fader_{control_id_number}"
+                        else:
+                            # Sparrow 5x100.
+                            control_id = control_id_raw + 1
 
                         # Now store the latest value in the dictionary.
-                        fader_value_by_id[fader_id] = value / 127
+                        control_value_by_id[control_id] = value / 127
+                        print(control_value_by_id)
 
-                if fader_value_by_id:
-                    mqtt_publish_fader_values(mqtt_client, fader_value_by_id)
+                if control_value_by_id:
+                    mqtt_publish_control_values(mqtt_client, control_value_by_id)
 
                 mqtt_client.loop(1.0 / NUM_UPDATES_PER_SECOND)
 
