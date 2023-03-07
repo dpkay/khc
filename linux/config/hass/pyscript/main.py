@@ -42,7 +42,7 @@ def on_livingroom_numpad_mqtt_received(payload_obj=None):
     elif key_name == '1_3':
       nvidia_shield_tv.reboot()
     elif key_name == '2_3':
-      pass
+      nvidia_shield_tv.match_frame_rate()
     elif key_name == '3_3':
       pass  # Unused
 
@@ -68,17 +68,17 @@ def on_livingroom_numpad_mqtt_received(payload_obj=None):
     # ---------------------
     # Top row.
     if key_name == '1_1':  # OFF
-      livingroom_lights.scene_very_off()
+      livingroom_lights.scene_all_off()
     elif key_name == '1_2':  # DIM
       livingroom_lights.scene_dim()
     elif key_name == '1_3':  # LOW
-      livingroom_lights.scene_dim2()
+      livingroom_lights.scene_low()
     elif key_name == '1_4':
       pass  # Doesn't work on Macally numpad.
 
     # Second row.
     elif key_name == '2_1':  # ALL
-      livingroom_lights.livingarea_all_on()
+      livingroom_lights.scene_all_on()
     elif key_name == '2_2':  # READ
       livingroom_lights.scene_livingroom_reading()
     elif key_name == '2_3':  # EAT

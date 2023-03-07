@@ -1,4 +1,3 @@
-import tasmota
 # BEDROOM
 # light.bedroom_ceiling_light
 # light.bedroom_closet_light
@@ -21,10 +20,7 @@ import tasmota
 # light.living_room_main_lights
 # light.living_room_sconces
 
-def toggle_bathroom():
-  light.main_bathroom_main_lights.toggle()
-
-def livingarea_all_on():
+def scene_all_on():
   # ON
   light.front_foyer_main_lights.turn_on()
   light.hallway_main_lights.turn_on()
@@ -35,15 +31,15 @@ def livingarea_all_on():
   light.living_room_sconces.turn_on()
   light.dining_room_cove_lights.turn_on()
   light.dining_room_chandelier.turn_on()
-  switch.turn_on(entity_id=tasmota.SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID)
-  switch.turn_on(entity_id=tasmota.SWITCH_DININGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.livingroom_plug_xmas_lights.turn_on()
+  input_boolean.diningroom_plug_xmas_lights.turn_on()
 
 def scene_livingroom_reading():
   # ON
   light.living_room_main_lights.turn_on()
   light.living_room_cove_lights.turn_on()
   light.living_room_sconces.turn_on()
-  switch.turn_on(entity_id=tasmota.SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.livingroom_plug_xmas_lights.turn_on()
 
   # OFF
   light.front_foyer_main_lights.turn_off()
@@ -53,13 +49,13 @@ def scene_livingroom_reading():
   light.dining_room_cove_lights.turn_off()
   light.dining_room_chandelier.turn_off()
   light.living_room_sconces.turn_off()
-  switch.turn_off(entity_id=tasmota.SWITCH_DININGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.diningroom_plug_xmas_lights.turn_off()
 
 def scene_dining():
   # ON
   light.dining_room_cove_lights.turn_on()
   light.dining_room_chandelier.turn_on()
-  switch.turn_on(entity_id=tasmota.SWITCH_DININGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.diningroom_plug_xmas_lights.turn_on()
 
   # OFF
   light.living_room_main_lights.turn_off()
@@ -70,9 +66,9 @@ def scene_dining():
   light.kitchen_main_lights.turn_off()
   light.kitchen_under_cabinet.turn_off()
   light.living_room_sconces.turn_off()
-  switch.turn_off(entity_id=tasmota.SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.livingroom_plug_xmas_lights.turn_off()
 
-def scene_very_off():
+def scene_all_off():
   # OFF
   light.front_foyer_main_lights.turn_off()
   light.hallway_main_lights.turn_off()
@@ -83,10 +79,14 @@ def scene_very_off():
   light.living_room_sconces.turn_off()
   light.dining_room_cove_lights.turn_off()
   light.dining_room_chandelier.turn_off()
-  switch.turn_off(entity_id=tasmota.SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID)
-  switch.turn_off(entity_id=tasmota.SWITCH_DININGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.diningroom_plug_xmas_lights.turn_off()
+  input_boolean.livingroom_plug_xmas_lights.turn_off()
 
 def scene_dim():
+  # ON
+  light.living_room_sconces.turn_on(brightness=70)
+  input_boolean.livingroom_plug_xmas_lights.turn_on()
+
   # OFF
   light.front_foyer_main_lights.turn_off()
   light.hallway_main_lights.turn_off()
@@ -97,41 +97,41 @@ def scene_dim():
   light.living_room_sconces.turn_off()
   light.dining_room_cove_lights.turn_off()
   light.dining_room_chandelier.turn_off()
-  switch.turn_off(entity_id=tasmota.SWITCH_DININGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.diningroom_plug_xmas_lights.turn_off()
 
-  # ON
-  light.living_room_sconces.turn_on(brightness=70)
-  switch.turn_on(entity_id=tasmota.SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID)
-
-def scene_dim2():
-  # OFF
-  light.front_foyer_main_lights.turn_off()
-  light.hallway_main_lights.turn_off()
-  light.kitchen_main_lights.turn_off()
-  light.kitchen_under_cabinet.turn_off()
-  light.dining_room_cove_lights.turn_off()
-  light.dining_room_chandelier.turn_off()
-
+def scene_low():
   # ON
   light.dining_room_cove_lights.turn_on(brightness=30)
   light.living_room_cove_lights.turn_on(brightness=30)
   light.living_room_main_lights.turn_on(brightness=3)
   light.living_room_sconces.turn_on(brightness=90)
-  switch.turn_on(entity_id=tasmota.SWITCH_DININGROOM_XMAS_LIGHTS_ENTITY_ID)
-  switch.turn_on(entity_id=tasmota.SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.diningroom_plug_xmas_lights.turn_on()
+  input_boolean.livingroom_plug_xmas_lights.turn_on()
+
+  # OFF
+  light.front_foyer_main_lights.turn_off()
+  light.hallway_main_lights.turn_off()
+  light.kitchen_main_lights.turn_off()
+  light.kitchen_under_cabinet.turn_off()
+  light.dining_room_cove_lights.turn_off()
+  light.dining_room_chandelier.turn_off()
 
 def scene_dim_livingroom_only():
+  # ON
+  input_boolean.livingroom_plug_xmas_lights.turn_on()
+
+  # OFF
   light.front_foyer_main_lights.turn_off()
   light.hallway_main_lights.turn_off()
   light.living_room_main_lights.turn_off()
   light.living_room_cove_lights.turn_off()
   light.living_room_sconces.turn_off()
   light.dining_room_cove_lights.turn_off()
-  switch.turn_off(entity_id=tasmota.SWITCH_DININGROOM_XMAS_LIGHTS_ENTITY_ID)
-  switch.turn_on(entity_id=tasmota.SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.diningroom_plug_xmas_lights.turn_off()
 
 def scene_on_livingroom_only():
+  # ON
   light.living_room_main_lights.turn_on(brightness=70)
   light.living_room_cove_lights.turn_on()
   light.dining_room_cove_lights.turn_on()
-  switch.turn_on(entity_id=tasmota.SWITCH_LIVINGROOM_XMAS_LIGHTS_ENTITY_ID)
+  input_boolean.livingroom_plug_xmas_lights.turn_on()

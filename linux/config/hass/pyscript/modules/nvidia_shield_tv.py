@@ -16,9 +16,9 @@ def send_key(name):
 
 def reboot():
   # Power cycle the plug which the Shield is plugged into.
-  light.livingroom_plug_nvidia_shield.turn_off()
+  input_boolean.livingroom_plug_nvidia_shield.turn_off()
   task.sleep(2)
-  light.livingroom_plug_nvidia_shield.turn_on()
+  input_boolean.livingroom_plug_nvidia_shield.turn_on()
 
 def play_pause():
   media_player.media_play_pause(entity_id=CAST_ENTITY_ID)
@@ -72,3 +72,11 @@ def on_cast_app_name_changed(value=None):
 @state_trigger(f"{CAST_ENTITY_ID}")
 def on_cast_something_changed(trigger_type=None, var_name=None, value=None, old_value=None):
   log.info(f"{trigger_type=} {var_name=} {value=} {old_value=}")
+
+def match_frame_rate():
+  menu()
+  task.sleep(1.0)
+  send_key("down")
+  send_key("down")
+  send_key("down")
+  send_key("center")
