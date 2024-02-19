@@ -45,13 +45,7 @@ def create_midi_devices(buffer_size):
         num_inputs = dev[2]
         num_outputs = dev[3]
 
-        # Sparrow 5x100: Faders only
-        # Sparrow 5x5: Faders and dials
-        if (
-            name in ["Sparrow 5x100", "Sparrow 5x5"]
-            and num_inputs == 1
-            and num_outputs == 0
-        ):
+        if name == "Sparrow 5x5" and num_inputs == 1 and num_outputs == 0:
             sparrow_device_ids.append(i)
         elif name == "LoopMIDI" and num_inputs == 0 and num_outputs == 1:
             loopmidi_device_ids.append(i)
@@ -135,7 +129,7 @@ def on_mqtt_message_received(client, userdata_loopmidi_output_device, msg):
         return
 
     # Uncomment the following for debugging the received payload.
-    print(json.dumps(payload_json, indent=2))
+    print("Received MQTT JSON message:", json.dumps(payload_json, indent=2))
 
     # Now act based on the topic name.
     if msg.topic == f"{MQTT_TOPIC_PREFIX}/daw/set_params":
@@ -185,18 +179,12 @@ if __name__ == "__main__":
                         control_id_raw = event[0][1]
                         value = event[0][2]
 
-                        # Sparrow 5x5 sends the control id as 5-based.
-                        # Sparrow 5x100 sends the control id as 0-based.
-                        # For downstream consumption one-based makes more sense.
-                        print(control_id_raw)
-                        if control_id_raw > 4:
-                            # Sparrow 5x5.
-                            # TODO: Fix after testing.
-                            control_id_number = control_id_raw - 4
-                            control_id = f"fader_{control_id_number}"
+                        # Convert the MIDI control number (ranges from 0 to 9) to
+                        # KHC control id ("dial_1" to "dial_5" and "fader_1" to "fader_5").
+                        if control_id_raw < 5:
+                            control_id = f"dial_{control_id_raw + 1}"
                         else:
-                            # Sparrow 5x100.
-                            control_id = control_id_raw + 1
+                            control_id = f"fader_{control_id_raw - 4}"
 
                         # Now store the latest value in the dictionary.
                         control_value_by_id[control_id] = value / 127
