@@ -160,7 +160,7 @@ if __name__ == "__main__":
 
             # Setup MQTT.
             print("Attempting to connect to MQTT broker...")
-            mqtt_client = paho.mqtt.client.Client(MQTT_CLIENT_NAME)
+            mqtt_client = paho.mqtt.client.Client(paho.mqtt.client.CallbackAPIVersion.VERSION1, MQTT_CLIENT_NAME)
             mqtt_client.on_connect = on_mqtt_connected
             mqtt_client.on_message = on_mqtt_message_received
             mqtt_client.user_data_set(loopmidi_output)
