@@ -14,7 +14,7 @@ What it does
 • Creates a fresh session with the first service
 • Adds one tmux window per remaining service
 • Pipes stdout/stderr of each service to:
-    ~/Library/Logs/khc_services/<service>.log
+    ~/Library/Logs/khc/<service>.log
 
 Where service scripts live
 --------------------------
@@ -52,7 +52,7 @@ Attach to the session (watch live output):
     # Detach: Ctrl-b then d
 
 Tail logs (both at once):
-    tail -f ~/Library/Logs/khc_services/*.log
+    tail -f ~/Library/Logs/khc/*.log
 
 Restart a single service window (example: khc-mqtt-to-reaper):
     tmux kill-window -t khc:khc-mqtt-to-reaper
@@ -70,7 +70,7 @@ Troubleshooting
 ---------------
 • "tmux: command not found" → Install tmux: `brew install tmux`
 • A service window appears then exits → Check its log:
-      tail -n 200 ~/Library/Logs/khc_services/<service>.log
+      tail -n 200 ~/Library/Logs/khc/<service>.log
   Common causes: missing env vars, wrong serial port, wrong OSC port, etc.
 • Session doesn’t exist / "no server running…" → Just re-run this script.
 • You changed SERVICE names or directory → Update SERVICES / SERVICES_ABS_DIR below.
@@ -104,7 +104,7 @@ SERVICES = [
 ]
 
 # Where logs go (rotated manually with logrotate/newsyslog if desired)
-LOGDIR = Path.home() / "Library" / "Logs" / "khc_services"
+LOGDIR = Path.home() / "Library" / "Logs" / "khc"
 
 # Optionally pin tmux/python paths via env; otherwise we use PATH
 TMUX = os.environ.get("TMUX") or subprocess.getoutput("command -v tmux")

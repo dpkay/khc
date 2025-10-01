@@ -12,22 +12,21 @@ Deps:
   pip install paho-mqtt pyserial
 """
 
+from __future__ import annotations
+
 import json
-import os
 import sys
 from typing import Dict, Optional
 
 import paho.mqtt.client as mqtt
 import serial as pyserial
 
+from common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client
+
 # --------------------------------------------------------------------
 # Config (adjust SERIAL_PORT to match your Mac's device path)
 # --------------------------------------------------------------------
-MQTT_CLIENT_NAME   = "mqtt_from_and_to_kvm"
-MQTT_TOPIC_PREFIX  = "kha/bedroom/windows_pc"
-MQTT_HOST          = os.environ["MQTT_HOST"]
-MQTT_USER          = os.environ["MQTT_USER"]
-MQTT_PASSWORD      = os.environ["MQTT_PASSWORD"]
+MQTT_CLIENT_NAME  = "mqtt_from_and_to_kvm"
 
 # Example from your system_profiler results; change as needed:
 SERIAL_PORT        = "/dev/tty.usbmodemB7CD849C82261"
@@ -50,7 +49,6 @@ def write_kvm_command(ser: pyserial.Serial, cmd: bytes) -> None:
     ser.write(cmd)
     ser.flush()
 
-
 # --------------------------------------------------------------------
 # MQTT callbacks (v2 API signatures)
 # --------------------------------------------------------------------
@@ -63,7 +61,6 @@ def on_mqtt_connected(
 ):
     print(f"[mqtt] Connected: reason={reason_code}")
     client.subscribe(f"{MQTT_TOPIC_PREFIX}/kvm/#")
-
 
 def on_mqtt_message_received(
     client: mqtt.Client,
@@ -97,7 +94,6 @@ def on_mqtt_message_received(
     except Exception as e:
         print(f"[kvm] serial write failed: {e}")
 
-
 # --------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------
@@ -106,34 +102,22 @@ def main() -> int:
     print(f"[serial] Opening {SERIAL_PORT} @ {SERIAL_BAUD}…")
     ser = pyserial.Serial(SERIAL_PORT, baudrate=SERIAL_BAUD, timeout=SERIAL_TIMEOUT_SEC)
 
-    print(f"[mqtt] Broker {MQTT_HOST} as {MQTT_CLIENT_NAME}")
-    client = mqtt.Client(
-        callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
-        client_id=MQTT_CLIENT_NAME,
-    )
+    print(f"[mqtt] Connecting as {MQTT_CLIENT_NAME}")
+    client = create_and_connect_mqtt_client(MQTT_CLIENT_NAME)
     client.on_connect = on_mqtt_connected
     client.on_message = on_mqtt_message_received
     client.user_data_set(ser)
 
-    client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
-    client.connect(MQTT_HOST, 1883, keepalive=30)
-
     try:
-        # Simpler: let paho handle the network loop (blocks until Ctrl-C)
-        client.loop_forever()
+        client.loop_forever()  # blocks
     except KeyboardInterrupt:
         print("\n[loop] Stopping…")
     finally:
-        try:
-            ser.close()
-        except Exception:
-            pass
-        try:
-            client.disconnect()
-        except Exception:
-            pass
+        try: ser.close()
+        except Exception: pass
+        try: client.disconnect()
+        except Exception: pass
     return 0
-
 
 if __name__ == "__main__":
     try:

@@ -5,20 +5,12 @@ MIDI → MQTT bridge (batched)
 Listens to MIDI CCs from 'Sparrow 5x5' and publishes
 coalesced JSON updates to MQTT every ~20 ms.
 
-Data flow
----------
-- MIDI CC messages 0–9 are mapped to logical control IDs:
-    dial_1..5 and fader_1..5
-- Values are normalized to floats in [0.0, 1.0]
-- Rapid bursts are batched: every 20 ms, all changed values
-  are published as one JSON dict to MQTT.
-
-Example payload:
-    {"fader_2": 0.543, "dial_1": 0.118}
+Deps:
+  pip install mido paho-mqtt
 """
 
-import json
-import os
+from __future__ import annotations
+
 import sys
 import time
 from typing import Dict
@@ -26,18 +18,15 @@ from typing import Dict
 import mido
 import paho.mqtt.client as mqtt
 
+from common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client, to_json
+
 # --------------------------------------------------------------------
 # Config
 # --------------------------------------------------------------------
 MQTT_CLIENT_NAME = "midi_to_mqtt"
-MQTT_TOPIC_PREFIX = "kha/bedroom/windows_pc"
-
-MQTT_HOST = os.environ["MQTT_HOST"]
-MQTT_USER = os.environ["MQTT_USER"]
-MQTT_PASSWORD = os.environ["MQTT_PASSWORD"]
 
 MIDI_DEVICE_NAME = "Sparrow 5x5"
-BATCH_INTERVAL = 0.02  # seconds (~20 ms)
+BATCH_INTERVAL   = 0.02  # seconds (~20 ms)
 
 # --------------------------------------------------------------------
 # Helpers
@@ -54,29 +43,17 @@ def normalize(value: int) -> float:
 # MQTT setup & publishing
 # --------------------------------------------------------------------
 def create_mqtt_client() -> mqtt.Client:
-    """Create and connect an MQTT client with background network loop."""
-    client = mqtt.Client(
-        callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
-        client_id=MQTT_CLIENT_NAME,
-    )
-    client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
-    client.connect(MQTT_HOST, 1883, keepalive=30)
+    """Create and connect an MQTT client; run network loop in a background thread."""
+    client = create_and_connect_mqtt_client(MQTT_CLIENT_NAME)
     client.loop_start()
     return client
 
-def publish_controls(client: mqtt.Client, pending_khc_control_value_by_id: Dict[str, float]) -> None:
-    """
-    Publish all changed control values as one JSON payload.
-
-    Payload example:
-        {"fader_2": 0.543, "dial_1": 0.118}
-    """
-    if not pending_khc_control_value_by_id:
+def publish_controls(client: mqtt.Client, pending: Dict[str, float]) -> None:
+    """Publish all changed control values as one compact JSON payload."""
+    if not pending:
         return
     topic = f"{MQTT_TOPIC_PREFIX}/controls"
-    payload = json.dumps(pending_khc_control_value_by_id)
-    client.publish(topic, payload, qos=0, retain=False)
-    # print(f"[midi→mqtt] {topic} {payload}")
+    client.publish(topic, to_json(pending), qos=0, retain=False)
 
 # --------------------------------------------------------------------
 # MIDI processing
@@ -89,7 +66,7 @@ def run_midi_loop(client: mqtt.Client) -> None:
         print(f"[error] MIDI device '{MIDI_DEVICE_NAME}' not found.", file=sys.stderr)
         sys.exit(1)
 
-    pending_khc_control_value_by_id: Dict[str, float] = {}
+    pending: Dict[str, float] = {}
     last_flush = time.monotonic()
 
     print(f"[midi] Listening on '{MIDI_DEVICE_NAME}'")
@@ -99,18 +76,13 @@ def run_midi_loop(client: mqtt.Client) -> None:
         for msg in port:
             if msg.type != "control_change" or not (0 <= msg.control <= 9):
                 continue
-
             control_id = khc_control_id_from_cc(msg.control)
-            value = normalize(msg.value)
+            pending[control_id] = normalize(msg.value)
 
-            # Mark this control as changed since last flush
-            pending_khc_control_value_by_id[control_id] = value
-
-            # Flush batch every BATCH_INTERVAL
             now = time.monotonic()
             if now - last_flush >= BATCH_INTERVAL:
-                publish_controls(client, pending_khc_control_value_by_id)
-                pending_khc_control_value_by_id.clear()
+                publish_controls(client, pending)
+                pending.clear()
                 last_flush = now
 
 # --------------------------------------------------------------------

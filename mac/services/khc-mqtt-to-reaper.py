@@ -5,31 +5,28 @@ MQTT → REAPER (OSC) bridge
 Listens for MQTT JSON payloads and forwards mapped parameters
 to REAPER via OSC.
 
-Dependencies:
+Deps:
   pip install paho-mqtt python-osc
 """
 
+from __future__ import annotations
+
 import json
-import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 import paho.mqtt.client as mqtt
 from pythonosc.udp_client import SimpleUDPClient
 
+from common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client
+
 # --------------------------------------------------------------------
-# Hardcoded configuration
+# Config
 # --------------------------------------------------------------------
 MQTT_CLIENT_NAME = "mqtt_to_reaper_osc"
-MQTT_TOPIC_PREFIX = "kha/bedroom/windows_pc"
 
 REAPER_HOST = "127.0.0.1"
 REAPER_OSC_PORT = 1234
-
-# These still come from env, since they’re secrets
-MQTT_HOST = os.environ["MQTT_HOST"]
-MQTT_USER = os.environ["MQTT_USER"]
-MQTT_PASSWORD = os.environ["MQTT_PASSWORD"]
 
 # Map from MQTT parameter keys → REAPER OSC addresses
 PARAM_TO_OSC: Dict[str, str] = {
@@ -59,7 +56,7 @@ def send_osc_messages(osc_messages: List[Tuple[str, float]], osc_client: SimpleU
         osc_client.send_message(address, value)
 
 # --------------------------------------------------------------------
-# MQTT Callbacks (v2 API signatures)
+# MQTT Callbacks
 # --------------------------------------------------------------------
 def on_mqtt_connected(
     client: mqtt.Client,
@@ -71,7 +68,11 @@ def on_mqtt_connected(
     print(f"[mqtt] Connected: reason={reason_code}")
     client.subscribe(f"{MQTT_TOPIC_PREFIX}/daw/#")
 
-def on_mqtt_message_received(client: mqtt.Client, userdata_osc_client: SimpleUDPClient, msg: mqtt.MQTTMessage):
+def on_mqtt_message_received(
+    client: mqtt.Client,
+    userdata_osc_client: SimpleUDPClient,
+    msg: mqtt.MQTTMessage,
+):
     """Decode incoming MQTT message and forward as OSC if it matches our topic."""
     payload_decoded = msg.payload.decode("utf-8", "ignore")
     try:
@@ -94,20 +95,14 @@ def main() -> int:
     print(f"[osc] Connecting to REAPER at {REAPER_HOST}:{REAPER_OSC_PORT}")
     osc_client = SimpleUDPClient(REAPER_HOST, REAPER_OSC_PORT)
 
-    # Create MQTT client (v2 API)
-    print(f"[mqtt] Connecting to broker {MQTT_HOST} as {MQTT_CLIENT_NAME}")
-    client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
-                         client_id=MQTT_CLIENT_NAME)
+    # Create & connect MQTT client
+    print(f"[mqtt] Connecting as {MQTT_CLIENT_NAME}")
+    client = create_and_connect_mqtt_client(MQTT_CLIENT_NAME)
     client.on_connect = on_mqtt_connected
     client.on_message = on_mqtt_message_received
     client.user_data_set(osc_client)
-    client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
 
-    client.connect(MQTT_HOST, 1883, keepalive=30)
-
-    # Simplest event loop: block until Ctrl-C
     client.loop_forever()
-
     return 0
 
 if __name__ == "__main__":

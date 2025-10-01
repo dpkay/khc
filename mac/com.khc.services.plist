@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+  <!-- Unique label -->
+  <key>Label</key>
+  <string>com.khc.services</string>
+
+  <!-- Run your Python launcher directly -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>/Users/dpkay/khc/mac/start_khc_services.py</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/dpkay/khc/mac/</string>
+
+  <!-- Start at login, restart on crash -->
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+
+  <!-- Ensure tmux/python are found -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <!-- LaunchAgent itself logs to ~/Library/Logs/khc_services -->
+  <key>StandardOutPath</key>
+  <string>/Users/dpkay/Library/Logs/khc/launchagent.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/dpkay/Library/Logs/khc/launchagent.err.log</string>
+
+</dict>
+</plist>
