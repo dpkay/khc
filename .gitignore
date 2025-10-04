@@ -1,6 +1,13 @@
 # python
+__pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+build/
+dist/
 
 # vi
 *.swp
 *.swo
+

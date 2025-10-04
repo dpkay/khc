@@ -1,0 +1,14 @@
+[Unit]
+Description=KHC MQTT → Shield HID bridge
+After=network-online.target hidg.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/dpkay/khc/.venv/bin/python -u /home/dpkay/khc/python/src/khc/services/rbpiz2w-shieldremote/khc_mqtt_to_shield_hid.py
+EnvironmentFile=/home/dpkay/khc-private/.env
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
