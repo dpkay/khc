@@ -18,7 +18,7 @@ from typing import Dict
 import mido
 import paho.mqtt.client as mqtt
 
-from common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client, to_json
+from khc.services.common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client, to_json
 
 # --------------------------------------------------------------------
 # Config

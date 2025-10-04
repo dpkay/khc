@@ -21,7 +21,7 @@ from typing import Dict, Optional
 import paho.mqtt.client as mqtt
 import serial as pyserial
 
-from common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client
+from khc.services.common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client
 
 # --------------------------------------------------------------------
 # Config (adjust SERIAL_PORT to match your Mac's device path)

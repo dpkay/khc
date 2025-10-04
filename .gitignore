@@ -1,11 +1,67 @@
-# python
+# ------------------------------
+# Python build / venv cruft
+# ------------------------------
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+*.env
+*.venv
+
+# Bytecode cache
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.egg-info/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
 build/
 dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# C extensions
+*.so
+*.pyd
+*.dll
+*.dylib
+
+# Unit test / coverage reports
+.coverage
+*.cover
+coverage.xml
+nosetests.xml
+htmlcov/
+
+# MyPy / Pyright / type checking
+.mypy_cache/
+.pytype/
+.pyright/
+
+# IDEs / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+Library/Logs/khc/
+
+# Temporary files
+tmp/
+temp/
 
 # vi
 *.swp

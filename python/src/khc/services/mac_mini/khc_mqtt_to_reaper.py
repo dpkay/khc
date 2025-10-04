@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import paho.mqtt.client as mqtt
 from pythonosc.udp_client import SimpleUDPClient
 
-from common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client
+from khc.services.common import MQTT_TOPIC_PREFIX, create_and_connect_mqtt_client
 
 # --------------------------------------------------------------------
 # Config

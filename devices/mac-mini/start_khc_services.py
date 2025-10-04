@@ -78,37 +78,43 @@ Troubleshooting
 """
 
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
 
 # ============================
-# Configuration (edit here)
+# Configuration
 # ============================
 
-# Name of the tmux session that will hold your windows
 SESSION = "khc"
 
-# Get absolute path to the directory where this script lives
+# Folder containing this script (normally ~/khc/python)
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# Point SERVICES_ABS_DIR to a "services" sibling directory
-SERVICES_ABS_DIR = SCRIPT_DIR / "services"
+# Prefer venv Python if it exists
+VENV_PY = SCRIPT_DIR / ".venv" / "bin" / "python"
+PY = os.environ.get("PY") or (
+    str(VENV_PY) if VENV_PY.exists() else subprocess.getoutput("command -v python3")
+)
 
-# List of service *base names*. Each must exist as "<name>.py" in SERVICES_ABS_DIR.
-# These names are also used for tmux window names and log filenames.
-SERVICES = [
-    "khc-mqtt-to-kvm",
-    "khc-mqtt-to-reaper",
-    "khc-sparrow-to-mqtt"
-]
-
-# Where logs go (rotated manually with logrotate/newsyslog if desired)
+TMUX = os.environ.get("TMUX") or subprocess.getoutput("command -v tmux")
 LOGDIR = Path.home() / "Library" / "Logs" / "khc"
 
-# Optionally pin tmux/python paths via env; otherwise we use PATH
-TMUX = os.environ.get("TMUX") or subprocess.getoutput("command -v tmux")
-PY   = os.environ.get("PY")   or subprocess.getoutput("command -v python3")
+# Short service names (without package prefix)
+SERVICES = [
+    "khc_mqtt_to_kvm",
+    "khc_mqtt_to_reaper",
+    "khc_sparrow_to_mqtt",
+]
+
+# Common module prefix (all services live here)
+MODULE_PREFIX = "khc.services.mac_mini"
+
+# Optional extra environment variables to inject into tmux
+EXTRA_ENV = {
+    # "DEBUG": "1",
+}
 
 
 # ============================
@@ -116,58 +122,83 @@ PY   = os.environ.get("PY")   or subprocess.getoutput("command -v python3")
 # ============================
 
 def die(msg: str) -> None:
-    """Print an error and exit."""
     print(f"[error] {msg}", file=sys.stderr)
     sys.exit(1)
 
 def tmux(*args: str) -> subprocess.CompletedProcess:
-    """Run tmux with the given arguments; do not raise if it fails."""
     return subprocess.run([TMUX, *args], check=False, capture_output=True, text=True)
+
+def check_cmd_exists(path_or_name: str, label: str) -> None:
+    if not path_or_name:
+        die(f"{label} not found on PATH")
+    p = Path(path_or_name)
+    if not p.exists() and not path_or_name.startswith("/"):
+        return
+    if p.exists() and not p.is_file():
+        die(f"{label} at {path_or_name} is not a file")
+
+def py_can_import(py: str, module: str) -> tuple[bool, str]:
+    code = f"import importlib; importlib.import_module({module!r}); print('OK')"
+    r = subprocess.run([py, "-c", code], capture_output=True, text=True)
+    if r.returncode == 0 and "OK" in r.stdout:
+        return True, ""
+    return False, (r.stderr or r.stdout).strip()
 
 
 # ============================
 # Sanity checks
 # ============================
 
-if not TMUX or not Path(TMUX).exists():
-    die("tmux not found (brew install tmux) or set TMUX=/path/to/tmux")
-if not PY or not Path(PY).exists():
-    die("python3 not found or set PY=/path/to/python3")
-if not SERVICES_ABS_DIR.is_dir():
-    die(f"missing dir: {SERVICES_ABS_DIR}")
-
-missing = [svc for svc in SERVICES if not (SERVICES_ABS_DIR / f"{svc}.py").is_file()]
-if missing:
-    die("missing scripts:\n  " + "\n  ".join(f"{SERVICES_ABS_DIR}/{m}.py" for m in missing))
+check_cmd_exists(TMUX, "tmux")
+check_cmd_exists(PY, "python")
 
 LOGDIR.mkdir(parents=True, exist_ok=True)
+
+# Verify all modules importable
+failed = []
+for svc in SERVICES:
+    mod = f"{MODULE_PREFIX}.{svc}"
+    ok, err = py_can_import(PY, mod)
+    if not ok:
+        failed.append((mod, err))
+if failed:
+    msg = ["Some modules failed to import:"]
+    for mod, err in failed:
+        msg.append(f"  - {mod}\n      {err}")
+    msg.append("\nFix by activating venv and installing:")
+    msg.append("  cd ~/khc/python && . .venv/bin/activate && pip install -e .")
+    die("\n".join(msg))
 
 
 # ============================
 # Launch flow
 # ============================
 
-# 1) Kill any existing session (ignore errors if it doesn't exist).
+# Export any custom env vars to tmux
+for k, v in EXTRA_ENV.items():
+    tmux("set-environment", "-g", k, v)
+
+# Kill old session
 tmux("kill-session", "-t", SESSION)
 
-# 2) Create a fresh session with the first service.
+# First window
 first = SERVICES[0]
-first_cmd = f"{PY} -u {SERVICES_ABS_DIR}/{first}.py 2>&1 | tee -a '{LOGDIR}/{first}.log'"
+first_mod = f"{MODULE_PREFIX}.{first}"
+first_log = LOGDIR / f"{first}.log"
+first_cmd = f"{shlex.quote(PY)} -u -m {shlex.quote(first_mod)} 2>&1 | tee -a {shlex.quote(str(first_log))}"
 
-#   Use `sh -lc` so the full pipeline runs in a login-compatible shell,
-#   and `-u` (unbuffered) so logs stream immediately.
 r = tmux("new-session", "-d", "-s", SESSION, "-n", first, "sh", "-lc", first_cmd)
 if r.returncode != 0:
     die(f"tmux new-session failed: {r.stderr.strip()}")
 print(f"[ok] created session '{SESSION}' with window '{first}'")
 
-# 3) Add one window per remaining service.
+# Remaining windows
 for svc in SERVICES[1:]:
-    cmd = f"{PY} -u {SERVICES_ABS_DIR}/{svc}.py 2>&1 | tee -a '{LOGDIR}/{svc}.log'"
-    # IMPORTANT: target "SESSION:" (with trailing colon) so tmux picks the next free index
+    mod = f"{MODULE_PREFIX}.{svc}"
+    log = LOGDIR / f"{svc}.log"
+    cmd = f"{shlex.quote(PY)} -u -m {shlex.quote(mod)} 2>&1 | tee -a {shlex.quote(str(log))}"
     r = tmux("new-window", "-t", f"{SESSION}:", "-n", svc, "sh", "-lc", cmd)
     if r.returncode != 0:
-        # Non-fatal: we keep going and report the stderr line
         print(f"[warn] could not start '{svc}': {r.stderr.strip()}")
     else:
         print(f"[ok] started '{svc}'")

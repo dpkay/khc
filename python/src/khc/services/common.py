@@ -53,6 +53,7 @@ def create_and_connect_mqtt_client(client_id: str, keepalive: int = 30) -> mqtt.
     NOTE: You still need to assign callbacks and (optionally) user_data.
     """
     host, user, pwd = load_mqtt_secrets()
+    print(host,user,pwd)
 
     client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
