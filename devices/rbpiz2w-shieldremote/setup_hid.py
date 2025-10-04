@@ -5,7 +5,8 @@ setup_hid.py — Configure a Pi Zero 2 W as a composite USB HID gadget (Keyboard
 
 This script uses Linux ConfigFS to expose TWO HID interfaces to the host (your Shield):
   • /dev/hidg0 → Boot Keyboard (arrows, Enter, Esc) — 8-byte input report
-  • /dev/hidg1 → Consumer Control (Play/Pause, Next/Prev, Vol±) — 2-byte input report
+  • /dev/hidg1 → Consumer Control (Play/Pause, Next/Prev, Vol±) — 3-byte input report
+                  (Report ID + 2-byte payload)
 
 Why this file exists:
   - It makes the gadget setup **idempotent** and **self-healing** (rewrites bad/ASCII descriptors).
@@ -29,6 +30,7 @@ import argparse
 import os
 import sys
 import time
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -44,116 +46,118 @@ KB_FUNC = G_ROOT / "functions" / "hid.keyboard"
 CC_FUNC = G_ROOT / "functions" / "hid.consumer"
 UDC_FILE = G_ROOT / "UDC"
 
+# ----------------------------
+# Helper: parse commented hex into bytes
+# ----------------------------
+def hex_bytes(s: str) -> bytes:
+    """
+    Return bytes from a human-friendly, commented hex blob.
+    Accepts tokens like '05', '0x05', separated by spaces/newlines/commas.
+    Strips #… and //… to end-of-line, and /* … */ blocks.
+    """
+    # Strip /* ... */ comments
+    s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
+    # Strip //... and #... comments
+    s = re.sub(r"(?m)\s*(//|#).*?$", "", s)
+    # Normalize 0xAB → AB
+    s = re.sub(r"0x([0-9A-Fa-f]{2})\b", r"\1", s)
+    # Pull all two-hex-digit tokens
+    tokens = re.findall(r"\b[0-9A-Fa-f]{2}\b", s)
+    return bytes(int(t, 16) for t in tokens)
+
 # =============================================================================
 # Descriptor reference (Keyboard)
 # -----------------------------------------------------------------------------
-# This is a standard “boot keyboard” descriptor (HID Usage Page 0x07).
-# The keyboard report is 8 bytes:
+# Standard “boot keyboard” (HID Usage Page 0x07).
+# Report is 8 bytes:
 #   byte0: modifier bits (LCtrl,LShift,LAlt,LGUI, RCtrl,RShift,RAlt,RGUI)
 #   byte1: reserved (0)
 #   byte2..7: up to 6 simultaneous keycodes (0 when no key)
-#
-# Human breakdown (hex bytes AND meaning):
-#   05 01      Usage Page (Generic Desktop)
-#   09 06      Usage (Keyboard)
-#   A1 01      Collection (Application)
-#
-#     05 07    Usage Page (Keyboard/Keypad)
-#     19 E0    Usage Minimum (0xE0 = LeftControl)
-#     29 E7    Usage Maximum (0xE7 = Right GUI)
-#     15 00    Logical Minimum (0)
-#     25 01    Logical Maximum (1)          → each modifier is a single bit
-#     75 01    Report Size (1)
-#     95 08    Report Count (8)             → 8 modifier bits → BYTE 0
-#     81 02    Input (Data,Var,Abs)
-#
-#     95 01    Report Count (1)
-#     75 08    Report Size (8)
-#     81 03    Input (Const,Var,Abs)        → reserved BYTE 1
-#
-#     95 05    Report Count (5)
-#     75 01    Report Size (1)
-#     05 08    Usage Page (LEDs)
-#     19 01    Usage Minimum (Num Lock)
-#     29 05    Usage Maximum (Kana)
-#     91 02    Output (Data,Var,Abs)        → 5 LED output bits (host→device)
-#
-#     95 01    Report Count (1)
-#     75 03    Report Size (3)
-#     91 03    Output (Const,Var,Abs)       → LED padding
-#
-#     95 06    Report Count (6)
-#     75 08    Report Size (8)
-#     15 00    Logical Minimum (0)
-#     25 65    Logical Maximum (0x65 = 101) → allowed keycode range
-#     05 07    Usage Page (Keyboard/Keypad)
-#     19 00    Usage Minimum (0)
-#     29 65    Usage Maximum (101)
-#     81 00    Input (Data,Array)           → BYTES 2..7 (key slots)
-#
-#   C0         End Collection
 # =============================================================================
+KB_DESC = hex_bytes("""
+05 01  # Usage Page (Generic Desktop)
+09 06  # Usage (Keyboard)
+A1 01  # Collection (Application)
 
-KB_DESC = bytes.fromhex(
-    "05 01 09 06 A1 01"
-    " 05 07 19 E0 29 E7 15 00 25 01 75 01 95 08 81 02"
-    " 95 01 75 08 81 03"
-    " 95 05 75 01 05 08 19 01 29 05 91 02"
-    " 95 01 75 03 91 03"
-    " 95 06 75 08 15 00 25 65 05 07 19 00 29 65 81 00"
-    " C0"
-)
+  05 07  # Usage Page (Keyboard/Keypad)
+  19 E0  # Usage Minimum (0xE0 = LeftControl)
+  29 E7  # Usage Maximum (0xE7 = Right GUI)
+  15 00  # Logical Minimum (0)
+  25 01  # Logical Maximum (1)          → each modifier is 1 bit
+  75 01  # Report Size (1)
+  95 08  # Report Count (8)             → BYTE 0 (8 modifier bits)
+  81 02  # Input (Data,Var,Abs)
+
+  95 01  # Report Count (1)
+  75 08  # Report Size (8)
+  81 03  # Input (Const,Var,Abs)        → BYTE 1 (reserved)
+
+  95 05  # Report Count (5)
+  75 01  # Report Size (1)
+  05 08  # Usage Page (LEDs)
+  19 01  # Usage Minimum (Num Lock)
+  29 05  # Usage Maximum (Kana)
+  91 02  # Output (Data,Var,Abs)        → 5 LED output bits (host→device)
+
+  95 01  # Report Count (1)
+  75 03  # Report Size (3)
+  91 03  # Output (Const,Var,Abs)       → LED padding
+
+  95 06  # Report Count (6)
+  75 08  # Report Size (8)
+  15 00  # Logical Minimum (0)
+  25 65  # Logical Maximum (0x65 = 101) → allowed keycode range
+  05 07  # Usage Page (Keyboard/Keypad)
+  19 00  # Usage Minimum (0)
+  29 65  # Usage Maximum (101)
+  81 00  # Input (Data,Array)           → BYTES 2..7 (key slots)
+
+C0     # End Collection
+""")
 
 # =============================================================================
 # Descriptor reference (Consumer Control)
 # -----------------------------------------------------------------------------
-# Two-byte input report:
-#   byte0 = 5 one-bit fields, in THIS ORDER (we set bits matching this order):
+# Three-byte input report (Report ID + 2-byte payload):
+#   byte0 = Report ID (1)
+#   byte1 = 5 one-bit fields, in THIS ORDER:
 #            bit0 = Play/Pause    (Usage 0xCD)
 #            bit1 = Next Track    (Usage 0xB5)
 #            bit2 = Previous      (Usage 0xB6)
 #            bit3 = Volume Up     (Usage 0xE9)
 #            bit4 = Volume Down   (Usage 0xEA)
 #            bits5..7 = padding
-#   byte1 = full padding byte     (to make report_length=2 so writes never block)
-#
-# Human breakdown:
-#   05 0C      Usage Page (Consumer)
-#   09 01      Usage (Consumer Control)
-#   A1 01      Collection (Application)
-#
-#     15 00    Logical Min (0)
-#     25 01    Logical Max (1)     → on/off bits
-#
-#     09 CD    Usage (Play/Pause)
-#     09 B5    Usage (Scan Next)
-#     09 B6    Usage (Scan Previous)
-#     09 E9    Usage (Volume Up)
-#     09 EA    Usage (Volume Down)
-#
-#     75 01    Report Size (1)
-#     95 05    Report Count (5)    → 5 actual data bits in BYTE 0
-#     81 02    Input (Data,Var,Abs)
-#
-#     95 03    Report Count (3)    → pad to a full byte (still BYTE 0)
-#     81 03    Input (Const,Var,Abs)
-#
-#     75 08    Report Size (8)
-#     95 01    Report Count (1)    → BYTE 1 (full padding byte)
-#     81 03    Input (Const,Var,Abs)
-#
-#   C0         End Collection
+#   byte2 = full padding byte     (to make payload 2 bytes so writes never block)
 # =============================================================================
+CC_DESC = hex_bytes("""
+05 0C  # Usage Page (Consumer)
+09 01  # Usage (Consumer Control)
+A1 01  # Collection (Application)
 
-CC_DESC = bytes.fromhex(
-    "05 0C 09 01 A1 01"
-    " 15 00 25 01"
-    " 09 CD 09 B5 09 B6 09 E9 09 EA"
-    " 75 01 95 05 81 02"
-    " 95 03 81 03"
-    " 75 08 95 01 81 03"
-    " C0"
-)
+85 01  # Report ID (1)  → adds 1 byte to each input report
+
+15 00  # Logical Min (0)
+25 01  # Logical Max (1)     → on/off bits
+
+09 CD  # Usage (Play/Pause)
+09 B5  # Usage (Scan Next)
+09 B6  # Usage (Scan Previous)
+09 E9  # Usage (Volume Up)
+09 EA  # Usage (Volume Down)
+
+75 01  # Report Size (1)
+95 05  # Report Count (5)    → 5 actual data bits in BYTE 1
+81 02  # Input (Data,Var,Abs)
+
+95 03  # Report Count (3)    → pad to a full byte (still BYTE 1)
+81 03  # Input (Const,Var,Abs)
+
+75 08  # Report Size (8)
+95 01  # Report Count (1)    → BYTE 2 (full padding byte)
+81 03  # Input (Const,Var,Abs)
+
+C0     # End Collection
+""")
 
 # ----------------------------
 # Small helpers
@@ -245,7 +249,7 @@ def ensure_consumer():
     CC_FUNC.mkdir(parents=True, exist_ok=True)
     _write_text(CC_FUNC / "protocol", "0")
     _write_text(CC_FUNC / "subclass", "0")
-    _write_text(CC_FUNC / "report_length", "2")   # 2-byte input reports
+    _write_text(CC_FUNC / "report_length", "3")   # 3-byte input reports (ReportID + 2-byte payload)
 
     desc = CC_FUNC / "report_desc"
     if (not desc.exists()) or _file_has_literal_backslash_x(desc) or (len(desc.read_bytes()) != len(CC_DESC)):
