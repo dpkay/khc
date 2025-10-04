@@ -13,11 +13,11 @@
   <array>
     <string>/usr/bin/env</string>
     <string>python3</string>
-    <string>/Users/dpkay/khc/mac/start_khc_services.py</string>
+    <string>/Users/dpkay/khc/devices/mac_mini/start_khc_services.py</string>
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/dpkay/khc/mac/</string>
+  <string>/Users/dpkay/khc/devices/mac_mini</string>
 
   <!-- Start at login, restart on crash -->
   <key>RunAtLoad</key><true/>

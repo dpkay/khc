@@ -52,7 +52,7 @@ mkdir -p ~/Library/Logs/khc_services
 Symlink the LaunchAgent plist into `~/Library/LaunchAgents` (macOS only scans there):
 
 ```bash
-ln -sf ~/khc/mac/com.khc.services.plist ~/Library/LaunchAgents/com.khc.services.plist
+ln -sf ~/khc/devices/mac_mini/com.khc.services.plist ~/Library/LaunchAgents/com.khc.services.plist
 ```
 
 Register it with launchd (modern commands):
