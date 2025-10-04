@@ -84,7 +84,7 @@ def on_mqtt_message_received(
     if msg.topic == f"{MQTT_TOPIC_PREFIX}/daw/set_params":
         osc_messages = build_osc_messages(payload_json)
         if osc_messages:
-            print(f"[bridge] Forwarding {len(osc_messages)} params to REAPER")
+            # print(f"[bridge] Forwarding {len(osc_messages)} params to REAPER")
             send_osc_messages(osc_messages, userdata_osc_client)
 
 # --------------------------------------------------------------------

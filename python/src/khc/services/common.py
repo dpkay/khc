@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """
-common.py — shared helpers for KHC services (macOS)
+common.py — shared helpers for KHC services (strict env-file mode)
 
-- Secrets come only from macOS Keychain using `security` CLI.
-- MQTT client factory uses Paho v2 and connects to host:1883.
-- Holds global constants (like MQTT_TOPIC_PREFIX) so all services stay in sync.
+Reads all secrets from ~/khc-private/.env.
+If the file or any required key is missing, aborts immediately.
+
+Example ~/.env:
+    MQTT_HOST=192.168.1.11
+    MQTT_PORT=1883
+    MQTT_USER=kaeserchen
+    MQTT_PASSWORD=supersecret
 """
 
 from __future__ import annotations
 
 import json
-import subprocess
+import sys
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import paho.mqtt.client as mqtt
@@ -18,49 +24,53 @@ import paho.mqtt.client as mqtt
 # ---------- Shared config ----------
 MQTT_TOPIC_PREFIX = "kha/bedroom/windows_pc"
 
-
-# ---------- Keychain ----------
-def get_secret(label: str) -> str:
-    """
-    Fetch a secret from macOS Keychain (service name = khc:<LABEL>).
-    Raises RuntimeError if not found.
-    """
-    r = subprocess.run(
-        ["security", "find-generic-password", "-s", f"khc:{label}", "-w"],
-        capture_output=True, text=True
-    )
-    if r.returncode != 0:
-        raise RuntimeError(
-            f"Missing secret '{label}' in Keychain.\n"
-            f"Add it with:\n"
-            f"  security add-generic-password -a \"$USER\" -s khc:{label} -w 'value'"
-        )
-    return r.stdout.strip()
+# ---------- Secrets ----------
+ENV_FILE = Path.home() / "khc-private" / ".env"
 
 
-def load_mqtt_secrets() -> Tuple[str, str, str]:
-    """Convenience loader for MQTT creds: (host, username, password)."""
-    host = get_secret("MQTT_HOST")
-    user = get_secret("MQTT_USER")
-    pwd  = get_secret("MQTT_PASSWORD")
-    return host, user, pwd
+def _parse_env_file(path: Path) -> Dict[str, str]:
+    if not path.is_file():
+        sys.stderr.write(f"[fatal] Missing secrets file: {path}\n")
+        sys.stderr.write("Create it with the required keys (MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASSWORD)\n")
+        sys.exit(1)
+
+    secrets: Dict[str, str] = {}
+    for line in path.read_text().splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        if "=" not in s:
+            continue
+        k, v = s.split("=", 1)
+        secrets[k.strip()] = v.strip().strip('"').strip("'")
+
+    for key in ("MQTT_HOST", "MQTT_USER", "MQTT_PASSWORD"):
+        if key not in secrets:
+            sys.stderr.write(f"[fatal] Missing {key} in {path}\n")
+            sys.exit(1)
+
+    return secrets
+
+
+def load_mqtt_secrets() -> Tuple[str, str, str, int]:
+    """Return (host, user, password, port)."""
+    secrets = _parse_env_file(ENV_FILE)
+    host = secrets["MQTT_HOST"]
+    user = secrets["MQTT_USER"]
+    pwd = secrets["MQTT_PASSWORD"]
+    port = int(secrets.get("MQTT_PORT", "1883"))
+    return host, user, pwd, port
 
 
 # ---------- MQTT ----------
 def create_and_connect_mqtt_client(client_id: str, keepalive: int = 30) -> mqtt.Client:
-    """
-    Create a Paho v2 client, set credentials from Keychain, and connect.
-    NOTE: You still need to assign callbacks and (optionally) user_data.
-    """
-    host, user, pwd = load_mqtt_secrets()
-    print(host,user,pwd)
-
+    host, user, pwd, port = load_mqtt_secrets()
     client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
         client_id=client_id,
     )
     client.username_pw_set(user, pwd)
-    client.connect(host, 1883, keepalive=keepalive)
+    client.connect(host, port, keepalive=keepalive)
     return client
 
 

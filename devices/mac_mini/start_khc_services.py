@@ -87,19 +87,39 @@ from pathlib import Path
 # Configuration
 # ============================
 
-SESSION = "khc"
+from pathlib import Path
+import os, subprocess, sys
 
-# Folder containing this script (normally ~/khc/python)
-SCRIPT_DIR = Path(__file__).resolve().parent
+# Project root and python dir (fixed layout)
+KHC_ROOT   = Path.home() / "khc"
+PYTHON_DIR = KHC_ROOT / "python"
 
-# Prefer venv Python if it exists
-VENV_PY = SCRIPT_DIR / ".venv" / "bin" / "python"
-PY = os.environ.get("PY") or (
-    str(VENV_PY) if VENV_PY.exists() else subprocess.getoutput("command -v python3")
-)
+# Require venv: abort if missing
+VENV_PY = PYTHON_DIR / ".venv" / "bin" / "python"
+if not VENV_PY.exists():
+    sys.stderr.write(
+        f"[fatal] Missing venv: {VENV_PY}\n"
+        f"Create it with:\n"
+        f"  cd {PYTHON_DIR}\n"
+        f"  python3 -m venv .venv\n"
+        f"  . .venv/bin/activate && pip install -e .\n"
+    )
+    sys.exit(1)
 
+# Always use the venv's python for services
+PY = str(VENV_PY)
+
+# tmux binary (fail if not found)
 TMUX = os.environ.get("TMUX") or subprocess.getoutput("command -v tmux")
+if not TMUX:
+    sys.stderr.write("[fatal] tmux not found on PATH (try: brew install tmux)\n")
+    sys.exit(1)
+
+# Logs dir
 LOGDIR = Path.home() / "Library" / "Logs" / "khc"
+
+# Tmux session name
+SESSION = "khc"
 
 # Short service names (without package prefix)
 SERVICES = [
