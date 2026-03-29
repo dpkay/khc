@@ -26,6 +26,8 @@ def qn90a_exit_ambient_mode():
 
   # Once the mode switch completed, made the automatically-opened menu disappear again.
   task.sleep(3)
+  # This seems to be necessary as of 9/23/2025
+  media_player.select_source(entity_id=QN90A_ENTITY_ID, source="HDMI")
   send_key_to_qn90a("KEY_RETURN")
 
 
