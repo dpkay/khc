@@ -1,4 +1,3 @@
-
 # Loads default set of integrations. Do not remove.
 default_config:
 
@@ -8,25 +7,24 @@ pyscript:
 frontend:
   themes: !include_dir_merge_named themes
 
+recorder:
+  purge_keep_days: 10
+  auto_purge: true
+
 # Text to speech
 tts:
   - platform: google_translate
 
 automation: !include automations.yaml
-script: !include scripts.yaml
 scene: !include scenes.yaml
 
 logger:
-  default: info
+  default: warning
   logs:
-    custom_components.pyscript: info
+    homeassistant.components.automation: error
 
 binary_sensor:
   - platform: flic
-
-spotcast:
-  sp_dc: AQCe3ZribH_raek1YQMhTFm6_aS9j_fBQ__XmV-aBMxnPIknuQRA0lgFoG-zRyMhFR7K_ZzZUv33EAAEHUFAGpRk8pFXLRV9evMGBHpxxp55qgKrw949c7FwkOlSlJE3Yc1dCsTbrlFHJ5RyPMKJcCDfB97gNyk6UVUuK4MXynvWGzAsoxVzY1OMWJF0tMKYKRvim9i6ebE9y48yEHGuOO5ooibT
-  sp_key: 987e9007-6e74-4705-a3af-fc3d9e5dfd58
 
 # ----------------------------------------------------------------------------
 # Booleans.
@@ -37,10 +35,15 @@ input_boolean:
   bedroom_sound_mix_desk_seat_with_speakers_active:
   bedroom_sound_mix_piano_seat_with_headphones_active:
   bedroom_sound_mix_desk_seat_with_headphones_active:
+  bedroom_kvm_personal_windows_active:
+  bedroom_kvm_personal_mac_active:
+  bedroom_kvm_corp_windows_active:
+  bedroom_kvm_corp_mac_active:
   bedroom_plug_piano_speakers:
   bedroom_plug_desk_speakers:
   bedroom_plug_piano_led_strip:
   bedroom_plug_studio_light:
+  bedroom_plug_laptop_fan:
   bedroom_plug_computer_monitor:
   bedroom_enable_dimmer_desk_light:
   livingroom_qn90a_ambient_mode:
