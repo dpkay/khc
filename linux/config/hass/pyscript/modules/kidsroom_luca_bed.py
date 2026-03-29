@@ -64,6 +64,7 @@ def on_button_pressed():
     turn_on_light()
 
 
-@time_trigger("period(now, 1s)")
-def on_timeout_expired():
-  update_light_state()
+# TODO: disabled until this module has its own light entity (currently shares desk dimmer)
+#@time_trigger("period(now, 1s)")
+#def on_timeout_expired():
+#  update_light_state()
