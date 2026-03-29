@@ -1,10 +1,26 @@
 import json
+import kidsroom_luca_bed
 import livingroom_lights
 import denon_avr
 import spotify
 import somfy_shades
 import samsung_qn90a
 import nvidia_shield_tv
+
+
+@mqtt_trigger("flic")
+def on_flic_message_received(payload_obj=None):
+  log.error(payload_obj)
+  if payload_obj['deviceName'] == 'DominikBed':
+    somfy_shades.send_somfy_shade_command(["bedroom_blackout_left"], "up")
+    somfy_shades.send_somfy_shade_command(["bedroom_blackout_right"], "up")
+    somfy_shades.send_somfy_shade_command(["bedroom_solar_left"], "up")
+    somfy_shades.send_somfy_shade_command(["bedroom_solar_right"], "up")
+    input_boolean.bedroom_plug_studio_light.turn_on()
+
+  elif payload_obj['deviceName'] == 'LucaBed':
+    kidsroom_luca_bed.on_button_pressed()
+
 
 @mqtt_trigger("khc/livingroom/numpad")
 def on_livingroom_numpad_mqtt_received(payload_obj=None):
@@ -177,5 +193,5 @@ def on_livingroom_numpad_mqtt_received(payload_obj=None):
     elif key_name == '4_2':
       nvidia_shield_tv.send_key("down")
     elif key_name == '4_3':
-      nvidia_shield_tv.send_key("home")
+      nvidia_shield_tv.home()
 
