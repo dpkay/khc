@@ -21,16 +21,19 @@ def reboot():
   input_boolean.livingroom_plug_nvidia_shield.turn_on()
 
 def play_pause():
-  media_player.media_play_pause(entity_id=CAST_ENTITY_ID)
+  send_key("play_pause")
 
 def previous_track():
-  media_player.media_previous_track(entity_id=CAST_ENTITY_ID)
+  send_key("prev")
 
 def next_track():
-  media_player.media_next_track(entity_id=CAST_ENTITY_ID)
+  send_key("next")
 
 def menu():
   _adb_shell_command("am start -a android.settings.SETTINGS")
+
+def home():
+  _adb_shell_command("am start -a android.intent.action.MAIN -c android.intent.category.HOME")
 
 def start_screensaver():
   _adb_shell_command("am start -n com.android.systemui/.Somnambulator")
