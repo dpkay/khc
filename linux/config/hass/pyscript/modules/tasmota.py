@@ -1,4 +1,3 @@
-# Synchronizes entities on the left side of this map with the right side of this map.
 entity_map = {
     "input_boolean.livingroom_plug_xmas_lights": "switch.khc_tasmota_001_sonoff_s31lite",
     "input_boolean.diningroom_plug_xmas_lights": "switch.khc_tasmota_002_sonoff_s31lite",
@@ -12,10 +11,13 @@ entity_map = {
 }
 
 
-@task_unique("on_entity_map_lhs_changed", kill_me=True)
 @state_trigger(list(entity_map.keys()))
 def on_entity_map_lhs_changed(var_name=None, value=None):
+    task.unique(f"tasmota_sync_{var_name}")
     target_entity_id = entity_map[var_name]
-    service.call(
-        domain="switch", name=f"turn_{value}", entity_id=target_entity_id, blocking=True
-    )
+    try:
+        service.call(
+            domain="switch", name=f"turn_{value}", entity_id=target_entity_id, blocking=True
+        )
+    except NameError:
+        pass  # device offline
