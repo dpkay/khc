@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.khc.mqtt-to-kvm</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/dpkay/khc/python/.venv/bin/python</string>
+    <string>-u</string>
+    <string>-m</string>
+    <string>khc.services.mac_mini.khc_mqtt_to_kvm</string>
+  </array>
+
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/dpkay/Library/Logs/khc/khc_mqtt_to_kvm.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/dpkay/Library/Logs/khc/khc_mqtt_to_kvm.err.log</string>
+</dict>
+</plist>
