@@ -4,6 +4,7 @@ entity_map = {
     "input_boolean.bedroom_plug_piano_speakers": "switch.khc_tasmota_003_sonoff_s31lite",
     "input_boolean.bedroom_plug_piano_led_strip": "switch.khc_tasmota_004_sonoff_s31lite",
     "input_boolean.bedroom_plug_computer_monitor": "switch.khc_tasmota_005_sonoff_s31",
+    "input_boolean.bedroom_plug_laptop_fan": "switch.khc_tasmota_012_sonoff_s31",
     "input_boolean.bedroom_plug_studio_light": "switch.khc_tasmota_006_sonoff_s31",
     "input_boolean.bedroom_plug_desk_speakers": "switch.khc_tasmota_007_sonoff_s31",
     # "UNUSED": "switch.khc_tasmota_008_sonoff_s31",
