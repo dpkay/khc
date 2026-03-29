@@ -30,8 +30,9 @@ REAPER_OSC_PORT = 1234
 
 # Map from MQTT parameter keys → REAPER OSC addresses
 PARAM_TO_OSC: Dict[str, str] = {
-    "input_volume__windows_laptop": "/track/2/volume",
-    "input_volume__external_laptop": "/track/3/volume",
+    "input_volume__piano": "/track/2/volume",
+    "input_volume__windows_laptop": "/track/4/volume",
+    "input_volume__external_laptop": "/track/5/volume",
     "output_volume__speakers": "/track/1/send/1/volume",
     "output_volume__regular_headphones": "/track/1/send/2/volume",
 }
@@ -95,12 +96,19 @@ def main() -> int:
     print(f"[osc] Connecting to REAPER at {REAPER_HOST}:{REAPER_OSC_PORT}")
     osc_client = SimpleUDPClient(REAPER_HOST, REAPER_OSC_PORT)
 
-    # Create & connect MQTT client
+    # Create MQTT client with callbacks set before connecting
     print(f"[mqtt] Connecting as {MQTT_CLIENT_NAME}")
-    client = create_and_connect_mqtt_client(MQTT_CLIENT_NAME)
+    from khc.services.common import load_mqtt_secrets
+    host, user, pwd, port = load_mqtt_secrets()
+    client = mqtt.Client(
+        callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+        client_id=MQTT_CLIENT_NAME,
+    )
+    client.username_pw_set(user, pwd)
     client.on_connect = on_mqtt_connected
     client.on_message = on_mqtt_message_received
     client.user_data_set(osc_client)
+    client.connect(host, port, keepalive=30)
 
     client.loop_forever()
     return 0
