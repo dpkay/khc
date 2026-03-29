@@ -7,12 +7,11 @@ QN90A_ENTITY_ID = "media_player.livingroom_qn90a"
 # A mode switch takes multiple seconds to fully complete; we shouldn't interfere inbetween.
 MINIMUM_NUMBER_OF_SECONDS_BETWEEN_MODE_SWITCHES = 5
 
-def send_key_to_qn90a(key):
-  media_player.play_media(entity_id=QN90A_ENTITY_ID,
-                          media_content_type="send_key",
-                          media_content_id=key)
+REMOTE_ENTITY_ID = "remote.livingroom_qn90a"
 
-@service
+def send_key_to_qn90a(key):
+  remote.send_command(entity_id=REMOTE_ENTITY_ID, command=key)
+
 def qn90a_enter_ambient_mode():
   send_key_to_qn90a("KEY_AMBIENT")
 
@@ -20,7 +19,6 @@ def qn90a_enter_ambient_mode():
   task.sleep(3)
   send_key_to_qn90a("KEY_RETURN")
 
-@service
 def qn90a_exit_ambient_mode():
   send_key_to_qn90a("KEY_EXIT")
 
@@ -30,13 +28,9 @@ def qn90a_exit_ambient_mode():
   media_player.select_source(entity_id=QN90A_ENTITY_ID, source="HDMI")
   send_key_to_qn90a("KEY_RETURN")
 
-
-@state_trigger("input_boolean.livingroom_qn90a_ambient_mode")
-def on_livingroom_qn90a_ambient_mode_changed(value=None):
-  if value == "on":
-    qn90a_enter_ambient_mode()
-  else:
-    qn90a_exit_ambient_mode()
+# Note: @state_trigger for the ambient mode boolean lives in
+# pyscript/samsung_qn90a_trigger.py (top-level) because pyscript
+# doesn't register triggers from modules/.
 
 def is_in_cooldown():
   # Make sure we didn't already trigger a switch recently, so we don't confuse the TV.
@@ -54,7 +48,7 @@ def maybe_toggle_ambient_mode():
     else:
       log.info("TV is off. Turning on and enabling ambient mode.")
       turn_on()
-      task.sleep(2)
+      task.sleep(5)
       input_boolean.livingroom_qn90a_ambient_mode.turn_on()
 
 def maybe_disable_ambient_mode():
@@ -75,4 +69,4 @@ def turn_off():
   media_player.turn_off(entity_id=QN90A_ENTITY_ID)
 
 def turn_on():
-  media_player.turn_on(entity_id=QN90A_ENTITY_ID)
+  remote.turn_on(entity_id=REMOTE_ENTITY_ID)
