@@ -44,7 +44,7 @@ def start_kodi():
   #     _adb_shell_command("am force-stop com.android.systemui")
   #
   # So, have to resort to a hack.
-  send_key("home")
+  home()
   task.sleep(0.5)
 
   # Now start Kodi.
@@ -53,7 +53,7 @@ def start_kodi():
 
 def start_youtube():
   # See comment in start_kodi.
-  send_key("home")
+  home()
   task.sleep(0.5)
   _adb_shell_command("am start -n com.google.android.youtube.tv/com.google.android.apps.youtube.tv.activity.ShellActivity")
   samsung_qn90a.maybe_disable_ambient_mode()
