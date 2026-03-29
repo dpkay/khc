@@ -36,7 +36,8 @@ SERIAL_TIMEOUT_SEC = 1
 # Map human-friendly source names → KVM ASCII commands (bytes)
 # (The Level1 KVM expects CRLF line endings.)
 SOURCE_TO_CMD: Dict[str, bytes] = {
-    "personal_windows": b"9:V=1\r\n",
+    "personal_mac":     b"9:V=1\r\n",
+    "personal_windows": b"9:V=2\r\n",
     "corp_mac":         b"9:V=3\r\n",
     "corp_windows":     b"9:V=4\r\n",
 }
