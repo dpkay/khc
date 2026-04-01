@@ -27,7 +27,7 @@ DEVICE_PATH = "/dev/input/by-id/usb-Telink_Macally_RFKeyboard-if01-event-kbd"
 # evdev KEY_* constants: https://python-evdev.readthedocs.io/en/latest/apidoc.html
 KEYCODE_TO_NAME = {
     evdev.ecodes.KEY_BACKSPACE: '1_1',
-    evdev.ecodes.KEY_KPEQUAL:  '1_2',   # numpad =
+    evdev.ecodes.KEY_EQUAL:    '1_2',   # Macally sends KEY_EQUAL, not KEY_KPEQUAL
     evdev.ecodes.KEY_KPSLASH:  '1_3',
     evdev.ecodes.KEY_KPASTERISK: '1_4',
     evdev.ecodes.KEY_KP7:      '2_1',
