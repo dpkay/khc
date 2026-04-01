@@ -5,7 +5,7 @@ directory is symlinked from the HAOS VM at `/config/`:
 
 - `/config/configuration.yaml` -> this repo's `configuration.yaml`
 - `/config/pyscript/` -> this repo's `pyscript/`
-- `/config/www/` -> this repo's `www/`
+- `/config/www/` is NOT symlinked — it receives build output from `app/deploy.sh`
 
 ## Pyscript Architecture
 

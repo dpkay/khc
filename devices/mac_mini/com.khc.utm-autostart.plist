@@ -16,9 +16,9 @@
       USB_VID=0658
       USB_PID=0200
 
-      # Wait for UTM to be running
-      for i in $(seq 1 30); do
-        $UTMCTL list &amp;&gt;/dev/null &amp;&amp; break
+      # Wait for UTM to load the VM (up to 2 minutes)
+      for i in $(seq 1 60); do
+        $UTMCTL status "$VM_NAME" &amp;&gt;/dev/null &amp;&amp; break
         sleep 2
       done
 
@@ -26,13 +26,13 @@
       STATUS=$($UTMCTL status "$VM_NAME" 2&gt;/dev/null | awk '{print $1}')
       if [ "$STATUS" != "started" ]; then
         $UTMCTL start "$VM_NAME"
-        sleep 10
+        sleep 15
       fi
 
-      # Connect Z-Wave USB stick
-      for i in $(seq 1 10); do
+      # Connect Z-Wave USB stick (retry for 30 seconds)
+      for i in $(seq 1 15); do
         if $UTMCTL usb list 2&gt;/dev/null | grep -q "$USB_VID:$USB_PID"; then
-          $UTMCTL usb connect "$VM_NAME" "$USB_VID:$USB_PID"
+          $UTMCTL usb connect "$VM_NAME" "$USB_VID:$USB_PID" 2&gt;&amp;1
           break
         fi
         sleep 2
