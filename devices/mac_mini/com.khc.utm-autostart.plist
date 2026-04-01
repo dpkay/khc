@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.khc.utm-autostart</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-c</string>
+    <string>
+      UTMCTL=/Applications/UTM.app/Contents/MacOS/utmctl
+      VM_NAME=hassio
+      USB_VID=0658
+      USB_PID=0200
+
+      # Wait for UTM to be running
+      for i in $(seq 1 30); do
+        $UTMCTL list &amp;&gt;/dev/null &amp;&amp; break
+        sleep 2
+      done
+
+      # Start the VM if not already running
+      STATUS=$($UTMCTL status "$VM_NAME" 2&gt;/dev/null | awk '{print $1}')
+      if [ "$STATUS" != "started" ]; then
+        $UTMCTL start "$VM_NAME"
+        sleep 10
+      fi
+
+      # Connect Z-Wave USB stick
+      for i in $(seq 1 10); do
+        if $UTMCTL usb list 2&gt;/dev/null | grep -q "$USB_VID:$USB_PID"; then
+          $UTMCTL usb connect "$VM_NAME" "$USB_VID:$USB_PID"
+          break
+        fi
+        sleep 2
+      done
+    </string>
+  </array>
+
+  <key>RunAtLoad</key><true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/dpkay/Library/Logs/khc/utm-autostart.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/dpkay/Library/Logs/khc/utm-autostart.err.log</string>
+</dict>
+</plist>
