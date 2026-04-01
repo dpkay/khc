@@ -1,25 +1,24 @@
 #!/usr/bin/python3
 """
-Numpad → MQTT bridge using evdev (no X11/pygame required).
+Numpad -> MQTT bridge using evdev (no X11/pygame required).
 
 Reads key events from the Macally RF numpad via /dev/input and publishes
 JSON messages to MQTT. Supports modifier keys (hold mod_left/mod_center/
 mod_right while pressing action keys).
 
-Requires: python-evdev, paho-mqtt
 Must run as root (or user with read access to /dev/input).
 """
 
 import json
-import os
 import sys
 import time
-from pathlib import Path
 
 import evdev
-import paho.mqtt.client as mqtt
+
+from khc.services.common import create_and_connect_mqtt_client
 
 # --------------- Config ---------------
+MQTT_CLIENT_NAME = "numpad_to_mqtt"
 MQTT_TOPIC = "khc/livingroom/numpad"
 DEVICE_PATH = "/dev/input/by-id/usb-Telink_Macally_RFKeyboard-if01-event-kbd"
 
@@ -47,42 +46,6 @@ KEYCODE_TO_NAME = {
 }
 
 
-def load_env(path: str) -> dict:
-    """Read KEY=VALUE pairs from a file."""
-    env = {}
-    p = Path(path).expanduser()
-    if p.exists():
-        for line in p.read_text().splitlines():
-            line = line.strip()
-            if line and '=' in line and not line.startswith('#'):
-                k, v = line.split('=', 1)
-                env[k.strip()] = v.strip()
-    return env
-
-
-def create_mqtt_client() -> mqtt.Client:
-    # Try ~/khc-private/.env first, fall back to environment variables
-    # Use SUDO_USER's home if running via sudo, otherwise current user's home
-    home = Path.home()
-    sudo_user = os.environ.get("SUDO_USER")
-    if sudo_user:
-        home = Path(f"/home/{sudo_user}")
-    env = load_env(str(home / "khc-private" / ".env"))
-    host = env.get("MQTT_HOST", os.environ.get("MQTT_HOST", "127.0.0.1"))
-    port = int(env.get("MQTT_PORT", os.environ.get("MQTT_PORT", "1883")))
-    user = env.get("MQTT_USER", os.environ.get("MQTT_USER", ""))
-    password = env.get("MQTT_PASSWORD", os.environ.get("MQTT_PASSWORD", ""))
-
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="numpad_to_mqtt")
-    if user:
-        client.username_pw_set(user, password)
-    client.on_connect = lambda *_: print(f"MQTT connected to {host}:{port}", file=sys.stderr)
-    client.on_disconnect = lambda *_: print("MQTT disconnected", file=sys.stderr)
-    client.connect(host, port, keepalive=30)
-    client.loop_start()
-    return client
-
-
 def find_device() -> evdev.InputDevice:
     """Open the numpad input device, retrying until found."""
     while True:
@@ -100,7 +63,7 @@ def find_device() -> evdev.InputDevice:
             time.sleep(2)
 
 
-def run(client: mqtt.Client):
+def run(client):
     dev = find_device()
     pressed_keys: set[str] = set()
 
@@ -146,12 +109,17 @@ def run(client: mqtt.Client):
             pass
 
 
-if __name__ == "__main__":
+def main():
     while True:
         try:
-            client = create_mqtt_client()
+            client = create_and_connect_mqtt_client(MQTT_CLIENT_NAME)
+            client.loop_start()
             run(client)
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
         print("Restarting in 2 seconds...", file=sys.stderr)
         time.sleep(2)
+
+
+if __name__ == "__main__":
+    main()

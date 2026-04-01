@@ -13,5 +13,8 @@ dependencies = [
     "python-rtmidi>=1.5.8",    
 ]
 
+[project.optional-dependencies]
+rbpi3 = ["evdev>=1.4.0"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
