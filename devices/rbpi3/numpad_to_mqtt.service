@@ -1,0 +1,15 @@
+[Unit]
+Description=KHC Numpad to MQTT bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dpkay
+Group=input
+ExecStart=/home/dpkay/khc/python/.venv/bin/python -u -m khc.services.rbpi3.numpad_to_mqtt
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
