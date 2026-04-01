@@ -1,73 +1,50 @@
-# React + TypeScript + Vite
+# Kaeser-Chen Home Control — Web Remote
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React/TypeScript PWA for controlling the home from a phone. Connects directly
+to Home Assistant's websocket API. Served from HA's `/config/www/` directory.
 
-Currently, two official plugins are available:
+## Tabs
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Shield/TV** — D-pad navigation, media controls, volume slider, ambient mode,
+  TV power, app launchers (Kodi, YouTube, Screensaver)
+- **Lights** — Scene presets (All On, All Off, Dim, Low, Reading, Dining, etc.)
+- **Shades** — Per-shade up/stop/down for all 10 Somfy shades, grouped by room
 
-## React Compiler
+## Architecture
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+Phone Browser
+    ↓ (WebSocket)
+Home Assistant (192.168.1.20:8123)
+    ↓ (pyscript / MQTT / service calls)
+Devices (Shield, Denon, Lutron, Somfy, Tasmota)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app calls HA services directly via websocket — no backend needed. Shield
+navigation keys are published via MQTT (same as the physical numpad). Light
+scenes and shade commands go through pyscript services.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Development
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
+
+Vite dev server proxies to HA. The HA access token is read from
+`~/khc-private/.env` (`HA_TOKEN=...`) at build time via `vite.config.ts`.
+
+## Deploy
+
+```bash
+./deploy.sh
+```
+
+Builds and scps to HAOS `/config/www/`. Accessible at
+`http://192.168.1.20:8123/local/index.html`.
+
+## Install as PWA
+
+On Android Chrome: visit the URL → three dots → Install app.
+Requires `chrome://flags/#unsafely-treat-insecure-origin-as-secure` set to
+`http://192.168.1.20:8123` for fullscreen PWA mode (no HTTPS on local network).
