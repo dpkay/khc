@@ -2,8 +2,6 @@ import json
 import re
 
 DAW_SET_PARAMS_MQTT_TOPIC = "kha/bedroom/windows_pc/daw/set_params"
-CONTROLS_MQTT_TOPIC = "kha/bedroom/windows_pc/controls"
-CONTROL_ENTITY_PATH_TEMPLATE = "input_number.bedroom_windows_pc_{control_name}"
 
 SOUNDMIX_NAMES = [
   "none",
@@ -13,28 +11,27 @@ SOUNDMIX_NAMES = [
   "desk_seat_with_headphones"
 ]
 
+# Stream Deck dials. Stream Deck calls input_number.set_value directly via the
+# HA service API; we only react here. desk_light_brightness is consumed by
+# bedroom_desk_lights.py, not the DAW, so it's not in this list.
 CONTROL_ENTITIES = [
-    "input_number.bedroom_windows_pc_fader_1",
-    "input_number.bedroom_windows_pc_fader_2",
-    "input_number.bedroom_windows_pc_fader_3",
-    "input_number.bedroom_windows_pc_fader_4",
-    "input_number.bedroom_windows_pc_fader_5",
-    "input_number.bedroom_windows_pc_dial_1",
-    "input_number.bedroom_windows_pc_dial_2",
-    "input_number.bedroom_windows_pc_dial_3",
-    "input_number.bedroom_windows_pc_dial_4",
-    "input_number.bedroom_windows_pc_dial_5",
+    "input_number.streamdeck_dial_master_volume",
+    "input_number.streamdeck_dial_piano_volume",
+    "input_number.streamdeck_dial_personal_windows_volume",
+    "input_number.streamdeck_dial_personal_mac_volume",
+    "input_number.streamdeck_dial_corp_mac_volume",
+    "input_number.streamdeck_dial_corp_windows_volume",
 ]
 
 
 # Cache of the last published DAW params, used to only send values that actually
-# changed. Without this, every MIDI fader update (~20ms) would republish all params.
+# changed. Without this, every dial update would republish all params.
 last_daw_params = None
 
 # When True, _update_daw() is suppressed. This is set during sound mix transitions
-# to prevent MIDI fader jitter from re-sending output volumes while speakers are
-# physically switching on/off. Without this, the continuous stream of fader updates
-# from the Sparrow MIDI controller would immediately overwrite the muted state.
+# to prevent dial updates from re-sending output volumes while speakers/headphones
+# are physically switching on/off. Without this, a dial update arriving mid-transition
+# would immediately overwrite the muted state.
 _muted = False
 
 
@@ -53,26 +50,29 @@ def _update_daw():
   if _muted:
     return
   # Pull all values from Home Assistant control entities.
-  piano_in_volume = float(input_number.bedroom_windows_pc_fader_1)
-  windows_pc_in_volume = float(input_number.bedroom_windows_pc_fader_2)
-  corp_laptop_in_volume = float(input_number.bedroom_windows_pc_fader_3)
-  music_laptop_in_volume = float(input_number.bedroom_windows_pc_fader_4)
-  speakers_out_volume = float(input_number.bedroom_windows_pc_fader_5)
-  piano_reverb = float(input_number.bedroom_windows_pc_dial_1)
-  headphones_out_volume = float(input_number.bedroom_windows_pc_dial_5)
+  master_volume = float(input_number.streamdeck_dial_master_volume)
+  piano_volume = float(input_number.streamdeck_dial_piano_volume)
+  personal_windows_volume = float(input_number.streamdeck_dial_personal_windows_volume)
+  personal_mac_volume = float(input_number.streamdeck_dial_personal_mac_volume)
+  corp_mac_volume = float(input_number.streamdeck_dial_corp_mac_volume)
+  corp_windows_volume = float(input_number.streamdeck_dial_corp_windows_volume)
 
-  # Assemble DAW state.
+  # Master routes to one output based on the active mix.
   mix_name = _get_current_soundmix_name()
+  uses_speakers = mix_name in ["piano_seat_with_speakers", "desk_seat_with_speakers"]
+  uses_regular_headphones = mix_name == "desk_seat_with_headphones"
+  uses_inverted_headphones = mix_name == "piano_seat_with_headphones"
+
   new_daw_params = {
-    "input_volume__piano": piano_in_volume,
-    "input_volume__windows_desktop": windows_pc_in_volume,
-    "input_volume__windows_laptop": corp_laptop_in_volume,
-    "input_volume__external_laptop": music_laptop_in_volume,
-    "input_reverb__piano": piano_reverb,
-    "input_oneminusreverb__piano": 1 - piano_reverb,
-    "output_volume__speakers": speakers_out_volume if mix_name in ["piano_seat_with_speakers", "desk_seat_with_speakers"] else 0,
-    "output_volume__inverted_headphones": headphones_out_volume if mix_name == "piano_seat_with_headphones" else 0,
-    "output_volume__regular_headphones": headphones_out_volume if mix_name == "desk_seat_with_headphones" else 0
+    "piano_volume": piano_volume,
+    "personal_windows_volume": personal_windows_volume,
+    "personal_mac_volume": personal_mac_volume,
+    "corp_mac_volume": corp_mac_volume,
+    "corp_windows_volume": corp_windows_volume,
+    "master_volume_speakers": master_volume if uses_speakers else 0,
+    "master_volume_regular_headphones": master_volume if uses_regular_headphones else 0,
+    # No OSC route yet — piano-seat-with-headphones currently produces silence.
+    "master_volume_inverted_headphones": master_volume if uses_inverted_headphones else 0,
   }
 
   # Assemble list of parameters ("publishable_daw_params") that changed since last time.
@@ -123,11 +123,11 @@ def _apply_soundmix(soundmix_name):
 
   # Mute all DAW outputs before switching plugs. This prevents a burst of sound
   # through the old speakers/headphones while they're physically powering off.
-  # We set _muted=True to block the continuous stream of _update_daw() calls from
-  # MIDI fader jitter, which would otherwise immediately restore the output volumes.
+  # We set _muted=True to block any _update_daw() calls triggered by dial updates
+  # arriving mid-transition, which would otherwise immediately restore the output volumes.
   global last_daw_params, _muted
   _muted = True
-  silence = {"output_volume__speakers": 0, "output_volume__inverted_headphones": 0, "output_volume__regular_headphones": 0}
+  silence = {"master_volume_speakers": 0, "master_volume_regular_headphones": 0, "master_volume_inverted_headphones": 0}
   mqtt.publish(topic=DAW_SET_PARAMS_MQTT_TOPIC, payload=json.dumps(silence))
   last_daw_params = None  # Force _update_daw to resend all params after unmute.
 
@@ -146,16 +146,6 @@ def set_soundmix(soundmix_name=None, entity_id=None):
   if soundmix_name and soundmix_name in SOUNDMIX_NAMES:
     _apply_soundmix(soundmix_name)
 
-
-@mqtt_trigger(CONTROLS_MQTT_TOPIC)
-def on_bedroom_controls_received(payload_obj=None):
-  # Update any changed control entities in Home Assistant.
-  for control_name, value in payload_obj.items():
-    entity_id = CONTROL_ENTITY_PATH_TEMPLATE.format(control_name=control_name)
-    input_number.set_value(entity_id=entity_id, value=value)
-
-  # Now update the DAW, as control values have changed.
-  _update_daw()
 
 @state_trigger(CONTROL_ENTITIES)
 def on_control_entity_value_changed(var_name, value):

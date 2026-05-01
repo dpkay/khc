@@ -55,43 +55,31 @@ input_boolean:
 # Floats.
 # ----------------------------------------------------------------------------
 input_number:
-  bedroom_windows_pc_fader_1:
+  streamdeck_dial_master_volume:
     min: 0
     max: 1
     step: 0.01
-  bedroom_windows_pc_fader_2:
+  streamdeck_dial_piano_volume:
     min: 0
     max: 1
     step: 0.01
-  bedroom_windows_pc_fader_3:
+  streamdeck_dial_personal_windows_volume:
     min: 0
     max: 1
     step: 0.01
-  bedroom_windows_pc_fader_4:
+  streamdeck_dial_personal_mac_volume:
     min: 0
     max: 1
     step: 0.01
-  bedroom_windows_pc_fader_5:
+  streamdeck_dial_corp_mac_volume:
     min: 0
     max: 1
     step: 0.01
-  bedroom_windows_pc_dial_1:
+  streamdeck_dial_corp_windows_volume:
     min: 0
     max: 1
     step: 0.01
-  bedroom_windows_pc_dial_2:
-    min: 0
-    max: 1
-    step: 0.01
-  bedroom_windows_pc_dial_3:
-    min: 0
-    max: 1
-    step: 0.01
-  bedroom_windows_pc_dial_4:
-    min: 0
-    max: 1
-    step: 0.01
-  bedroom_windows_pc_dial_5:
+  streamdeck_dial_desk_light_brightness:
     min: 0
     max: 1
     step: 0.01

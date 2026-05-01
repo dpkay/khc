@@ -1,11 +1,14 @@
 # Home Assistant Configuration
 
-Home Assistant OS runs in a UTM VM on the Mac Mini (192.168.1.20). This
-directory is symlinked from the HAOS VM at `/config/`:
+Home Assistant OS runs in a UTM VM on the Mac Mini (192.168.1.20). HA reads
+its config from `/homeassistant/` (aka `/config/`), where this repo's files
+appear via symlinks into a HAOS-side git checkout at `/homeassistant/khc`:
 
-- `/config/configuration.yaml` -> this repo's `configuration.yaml`
-- `/config/pyscript/` -> this repo's `pyscript/`
-- `/config/www/` is NOT symlinked — it receives build output from `app/deploy.sh`
+- `/homeassistant/configuration.yaml` -> `/config/khc/homeassistant/configuration.yaml`
+- `/homeassistant/pyscript/` -> `/config/khc/homeassistant/pyscript`
+- `/homeassistant/www/` is NOT a symlink — it receives build output from `app/deploy.sh`
+
+See "Updating" below for how to edit those files from the Mac.
 
 ## Pyscript Architecture
 
@@ -42,7 +45,34 @@ Build output from the React web remote app (`app/`). Deployed via
 
 ## Updating
 
-On the Mac, edit files in this directory and they're live on HAOS via symlink.
-After changes, restart HA: `ssh root@192.168.1.20 'ha core restart'`
+Two git checkouts exist: this one on the Mac (`~/khc`) and one on HAOS at
+`/homeassistant/khc`. The files HA actually reads are symlinks into the HAOS
+checkout (`/homeassistant/configuration.yaml -> /config/khc/homeassistant/configuration.yaml`,
+same for `pyscript/`). Sync the two checkouts via git push/pull.
 
-Or from HAOS: `cd /config/khc && git pull`
+After config changes: `ssh root@192.168.1.20 'ha core restart'` (pyscript
+autoreloads on file change — restart only needed for `configuration.yaml`).
+
+### Editing the HAOS checkout directly via SMB
+
+For quick test edits without git round-tripping, mount HAOS's `/homeassistant`
+as an SMB share. The Samba add-on must be installed in HA (user: `dpkay`,
+password set in add-on config). Seed the macOS Keychain once by mounting via
+Finder (`Cmd-K` → `smb://192.168.1.20` → check "Remember password").
+
+Then mount at the canonical path:
+
+```
+mount_smbfs "//dpkay:$(security find-internet-password -s 192.168.1.20 -a dpkay -w)@192.168.1.20/config" /Volumes/homeassistant/config
+```
+
+(`/Volumes/homeassistant/` is a regular dir owned by the user; `config/` inside
+is the mount point. Add sibling mounts for `addons`, `share`, etc. the same
+way if needed.)
+
+Edit at `/Volumes/homeassistant/config/khc/homeassistant/...` — changes are
+live in HA. The top-level `configuration.yaml` and `pyscript` symlinks under
+`/Volumes/homeassistant/config/` are not visible through SMB (absolute symlink
+targets fall outside the share root); always edit through the `khc/` subtree
+where the real files live. Commit from HAOS via SSH, then pull on the Mac
+local repo to stay in sync.

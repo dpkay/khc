@@ -2,7 +2,7 @@ from datetime import datetime as dt
 from datetime import timezone as timezone
 
 DESK_LIGHT_INPUT_ENABLED_ENTITY_ID = "input_boolean.bedroom_enable_dimmer_desk_light"
-DESK_LIGHT_INPUT_BRIGHTNESS_ENTITY_ID = "input_number.bedroom_windows_pc_dial_2"
+DESK_LIGHT_INPUT_BRIGHTNESS_ENTITY_ID = "input_number.streamdeck_dial_desk_light_brightness"
 DESK_LIGHT_OUTPUT_ENTITY_ID = "light.bedroom_dimmer_desk_lights_dimmer"
 DESK_LIGHT_OUTPUT_MIN_SECONDS_BETWEEN_UPDATES = 0.08
 

@@ -30,11 +30,14 @@ REAPER_OSC_PORT = 1234
 
 # Map from MQTT parameter keys → REAPER OSC addresses
 PARAM_TO_OSC: Dict[str, str] = {
-    "input_volume__piano": "/track/2/volume",
-    "input_volume__windows_laptop": "/track/4/volume",
-    "input_volume__external_laptop": "/track/5/volume",
-    "output_volume__speakers": "/track/1/send/1/volume",
-    "output_volume__regular_headphones": "/track/1/send/2/volume",
+    "piano_volume": "/track/2/volume",                   # piano
+    "personal_windows_volume": "/track/3/volume",        # personal win
+    "corp_mac_volume": "/track/4/volume",                # corp mac
+    "corp_windows_volume": "/track/5/volume",            # corp win
+    "personal_mac_volume": "/track/6/volume",            # mac mini
+    "master_volume_speakers": "/track/1/send/1/volume",  # submix → speakers
+    "master_volume_regular_headphones": "/track/1/send/2/volume",  # submix → headphones
+    # master_volume_inverted_headphones: no REAPER send yet (piano-seat-with-headphones mix)
 }
 
 # --------------------------------------------------------------------
