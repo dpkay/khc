@@ -8,6 +8,7 @@ QN90A_ENTITY_ID = "media_player.livingroom_qn90a"
 MINIMUM_NUMBER_OF_SECONDS_BETWEEN_MODE_SWITCHES = 5
 
 REMOTE_ENTITY_ID = "remote.livingroom_qn90a"
+AMBIENT_MODE_ENTITY_ID = "input_boolean.livingroom_qn90a_ambient_mode"
 
 def send_key_to_qn90a(key):
   remote.send_command(entity_id=REMOTE_ENTITY_ID, command=key)
@@ -47,8 +48,7 @@ def maybe_toggle_ambient_mode():
     # If the TV is off, then turn it on but start it in ambient mode.
     else:
       log.info("TV is off. Turning on and enabling ambient mode.")
-      turn_on()
-      task.sleep(5)
+      _wake()
       input_boolean.livingroom_qn90a_ambient_mode.turn_on()
 
 def maybe_disable_ambient_mode():
@@ -62,11 +62,35 @@ def maybe_enable_ambient_mode():
   else:
     log.info("Maybe enabling ambient mode: NO")
 
+def _clear_ambient_flag():
+  # An off TV can't be in ambient mode, whatever the boolean says. If the boolean
+  # stayed on, the next turn_on wouldn't change it and ambient mode would never
+  # start. state.set doesn't fire the ambient @state_trigger, so unlike
+  # input_boolean.turn_off this doesn't send the exit sequence to the TV.
+  state.set(AMBIENT_MODE_ENTITY_ID, "off")
+
+def _wake():
+  turn_on()
+  task.sleep(5)
+  _clear_ambient_flag()
+
+def wake_and_settle():
+  # Gets the TV ready to take a mode change: on, and past the cooldown.
+  if not is_on():
+    _wake()
+  while is_in_cooldown():
+    task.sleep(0.5)
+
+def show_ambient():
+  wake_and_settle()
+  input_boolean.livingroom_qn90a_ambient_mode.turn_on()
+
 def is_on():
   return state.get(QN90A_ENTITY_ID) == "on"
 
 def turn_off():
   media_player.turn_off(entity_id=QN90A_ENTITY_ID)
+  _clear_ambient_flag()
 
 def turn_on():
   remote.turn_on(entity_id=REMOTE_ENTITY_ID)
